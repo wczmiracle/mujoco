@@ -17,6 +17,7 @@ ap.add_argument("--configs", nargs="+", required=True, help="METHOD:DT, e.g. M0:
 ap.add_argument("--forces", nargs="+", type=float, default=[200.0, 300.0])
 ap.add_argument("--m2-yaml", default=None, help="for M2; or METHOD=path,... e.g. M0s=a.yaml,M2s=b.yaml")
 ap.add_argument("--lean", action="store_true")
+ap.add_argument("--dirs", nargs="+", type=float, default=None, help="push directions in degrees")
 args = ap.parse_args()
 
 def yaml_for(method):
@@ -27,13 +28,16 @@ def yaml_for(method):
   return dict(kv.split("=", 1) for kv in args.m2_yaml.split(",")).get(method)
 
 
+if args.dirs:
+  DIRS = args.dirs
 root = Path.home() / "data/mujoco_logs/protector_research" / args.tag
 for cfg in args.configs:
   method_tag, dt = cfg.split(":")
   method, _, ir = method_tag.partition("+e")  # e.g. M2s+e10 -> elliptic cone, impratio 10
   for force in args.forces:
     for d in DIRS:
-      out = root / f"{method_tag}_dt{dt}" / f"dir{d:03d}_F{force:g}"
+      run_name = f"dir{d:05.1f}_F{force:g}" if args.dirs else f"dir{int(d):03d}_F{force:g}"
+      out = root / f"{method_tag}_dt{dt}" / run_name
       if (out / "score.json").exists():
         continue
       print(f"[batch] {method_tag} dt={dt} dir={d} F={force}", flush=True)
