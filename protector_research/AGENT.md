@@ -67,5 +67,6 @@ RESULTS.md 每条格式：
 
 ## 汇报
 
-- 用户的 crontab 每小时整点运行 `tools/send_report.py --force`，把 RESULTS.md 的新增内容、新提交、正在跑的任务和新图发到 `~/.config/sample_plan_mail/env` 里的 `MAIL_TO`。
-- 停止邮件：`crontab -e` 删掉含 `protector_research/tools/send_report.py` 的那一行。
+- 每小时运行 `tools/send_report.py --force`，把 RESULTS.md 的新增内容、新提交、正在跑的任务和新图发到 `~/.config/sample_plan_mail/env` 里的 `MAIL_TO`。
+- 目前由 Claude Code 会话内定时任务触发（每小时第 7 分钟，会话关闭即停止，最长 7 天）。若要与会话无关地持续发送，由用户自行加入 crontab：
+  `7 * * * * cd /home/wang22/engineai/mujoco/protector_research && .venv/bin/python tools/send_report.py --force >> runs/logs/mail.log 2>&1`
