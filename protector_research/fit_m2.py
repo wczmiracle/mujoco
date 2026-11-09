@@ -144,6 +144,8 @@ def main():
   ap.add_argument("--maxiter", type=int, default=100)
   ap.add_argument("--joint", action="store_true")
   ap.add_argument("--only", type=str, default="", help="group mode: e.g. 12:0.4")
+  ap.add_argument("--holdout-h", type=float, default=None,
+                  help="fit without this drop height, then report error on it (overfitting check)")
   args = ap.parse_args()
 
   phases = 1 if args.dt <= 2e-5 else 4
@@ -159,13 +161,17 @@ def main():
   for key, rows in groups:
     if not args.joint and args.only and args.only != f"{key[0]:g}:{key[1]:g}":
       continue
-    rows = rows.reset_index(drop=True)
+    all_rows = rows.reset_index(drop=True)
+    if args.holdout_h is not None:
+      rows = all_rows[~np.isclose(all_rows.h, args.holdout_h)].reset_index(drop=True)
+    else:
+      rows = all_rows
     speeds = rows.v.to_numpy()
     targets = rows.Fpk_N.to_numpy()
     limits = np.array([pen_limit(t) for t in rows.t_mm])
     t0 = time.time()
     if args.joint:
-      contacts_of = lambda x: [decode_joint(x, t) for t in rows.t_mm]
+      contacts_of = lambda x: [decode_joint(x, t) for t in rows.t_mm]  # rows is read at call time
       bounds = JOINT_BOUNDS
     else:
       th = key[0] * 1e-3 if key[0] > 0 else 1e-3
@@ -173,6 +179,12 @@ def main():
       bounds = BOUNDS
     res = optimize(lambda x: score(sim, contacts_of(x), speeds, targets, limits, phases)[0],
                    bounds, args.maxiter, seed=0)
+    fit_rows = rows
+    if args.holdout_h is not None:  # evaluate on all heights, held-out ones included
+      rows = all_rows
+      speeds = rows.v.to_numpy()
+      targets = rows.Fpk_N.to_numpy()
+      limits = np.array([pen_limit(t) for t in rows.t_mm])
     loss, diag = score(sim, contacts_of(res.x), speeds, targets, limits, phases)
     log_err = np.log(diag[:, 0] / targets)
     item = {
@@ -189,7 +201,13 @@ def main():
                    for t, c in zip(rows.t_mm, contacts_of(res.x))},
         "rows": report_rows(rows, diag),
         "fit_seconds": time.time() - t0,
+        "holdout_h": args.holdout_h,
     }
+    if args.holdout_h is not None:
+      held = np.isclose(rows.h.to_numpy(), args.holdout_h)
+      item["holdout_rms_log_err"] = float(np.sqrt(np.mean(log_err[held] ** 2)))
+      item["holdout_max_abs_log_err"] = float(np.abs(log_err[held]).max())
+      item["train_rms_log_err"] = float(np.sqrt(np.mean(log_err[~held] ** 2)))
     if args.joint:
       item["x_names"] = JOINT_NAMES
     results.append(item)

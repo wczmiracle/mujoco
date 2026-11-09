@@ -34,7 +34,15 @@
 | `drop.py` | 落锤仿真与实验数据读取 |
 | `eval_old_m2.py` | 旧 M2 参数在各 timestep 下的误差 |
 | `fit_m2.py` | M2 拟合：`--dt`；分组拟合（每厚度×密度一组），或 `--joint`（同密度共享材料参数，width ∝ 厚度） |
+| `summarize_m2.py`、`plot_m2.py` | 汇总拟合结果、画图到 `runs/figs/` |
+| `tools/run_robot.py` | 单次闭环摔倒：AMP 控制器 + 无界面仿真，推一次；`--method M0/M1 --dt --direction --force` |
+| `tools/batch_robot.py` | 16 场景（8 方向 × 200/300 N）批量跑，结果在 `~/data/mujoco_logs/protector_research/<tag>/` |
+| `score_robot.py` | 读 `contact_quality.csv`，按 body 输出穿透、峰值力、滑移距离、有效质量 |
 | `tools/send_report.py` | 每小时邮件报告 |
+
+ROS 仿真器改动在工作空间分支 `protector-sim`（只在本地提交）：设置环境变量 `PROTECTOR_QUALITY_CSV=<路径>` 后，每个物理步写一份接触质量 CSV；设置 `PROTECTOR_SIM_TIMESTEP=<秒>` 可覆盖 timestep。改完 C++ 后执行 `colcon build --packages-select mujoco_simulator`。
+
+**注意：** install 下的 `pm_v2.yaml` 是指向 src 的软链接。`run_robot.py` 运行期间会临时修改它，结束时从备份恢复。批量运行期间不要提交这个文件；批量结束后用 `git diff` 确认它已恢复。同一时间只能运行一个仿真。
 
 环境：`protector_research/.venv`（MuJoCo 3.2.3，与机器人仿真一致）。MuJoCo 4.0 的 `simulate` 在 `../build/bin/`；M3 需要 4.0 的 Python 绑定，从源码编译。
 大的运行输出放 `runs/`（不进 git），图放 `runs/figs/`（邮件会附上新图）。
