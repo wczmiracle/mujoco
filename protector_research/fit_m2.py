@@ -144,13 +144,20 @@ def main():
   ap.add_argument("--maxiter", type=int, default=100)
   ap.add_argument("--joint", action="store_true")
   ap.add_argument("--only", type=str, default="", help="group mode: e.g. 12:0.4")
+  ap.add_argument("--max-e", type=float, default=None, help="override MAX_RESTITUTION (default 0.6)")
+  ap.add_argument("--density", type=float, default=None, help="joint mode: fit only this density")
   ap.add_argument("--holdout-h", type=float, default=None,
                   help="fit without this drop height, then report error on it (overfitting check)")
   args = ap.parse_args()
 
+  global MAX_RESTITUTION
+  if args.max_e is not None:
+    MAX_RESTITUTION = args.max_e
   phases = 1 if args.dt <= 2e-5 else 4
   sim = FastDrop(args.dt)
   tg = load_targets()
+  if args.density is not None:
+    tg = tg[(tg.density == args.density) | (tg.t_mm == 0)]
   results = []
 
   if args.joint:
@@ -202,6 +209,7 @@ def main():
         "rows": report_rows(rows, diag),
         "fit_seconds": time.time() - t0,
         "holdout_h": args.holdout_h,
+        "max_restitution": MAX_RESTITUTION,
     }
     if args.holdout_h is not None:
       held = np.isclose(rows.h.to_numpy(), args.holdout_h)
