@@ -36,9 +36,11 @@ def score(run: Path) -> dict:
                        and df.fn.max() < 1e6)
   dt = float(df.dt.iloc[0])
   for body, g in df.groupby("body"):
-    per_step = g.groupby("time").agg(fn=("fn", "sum"), pen=("dist", lambda d: max(0.0, -d.min())),
-                                     slip=("slip_speed", "max"), vn=("vn", "min"),
-                                     m_eff=("m_eff", "median"))
+    aggs = dict(fn=("fn", "sum"), pen=("dist", lambda d: max(0.0, -d.min())),
+                slip=("slip_speed", "max"), vn=("vn", "min"), m_eff=("m_eff", "median"))
+    if "slip_floor" in g.columns:
+      aggs["slip_floor"] = ("slip_floor", "max")
+    per_step = g.groupby("time").agg(**aggs)
     loaded = per_step[per_step.fn > FN_LOADED]
     first = per_step.iloc[0]
     out["bodies"][body] = {
@@ -49,11 +51,14 @@ def score(run: Path) -> dict:
         "vn_impact": float(-first.vn),
         "m_eff_impact": float(first.m_eff),
     }
+    if "slip_floor" in per_step.columns:
+      out["bodies"][body]["slip_floor_mm"] = float(loaded.slip_floor.sum() * dt * 1e3)
   b = out["bodies"].values()
   out["total"] = {
       "pen_max_mm": max(x["pen_max_mm"] for x in b),
       "fn_peak_kN": max(x["fn_peak_kN"] for x in b),
       "slip_mm_sum": sum(x["slip_mm"] for x in b),
+      "slip_floor_mm_sum": sum(x.get("slip_floor_mm", float("nan")) for x in b),
       "dt": dt,
   }
   return out
