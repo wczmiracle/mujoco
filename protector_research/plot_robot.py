@@ -14,14 +14,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 root = Path(sys.argv[1]).expanduser()
-order = ["M0_dt0.002", "M1_dt0.002", "M1L_dt0.002", "M0_dt0.0005", "M1_dt0.0005", "M1L_dt0.0005", "M2_dt0.0005"]
+order = ["M0_dt0.002", "M1_dt0.002", "M1L_dt0.002", "M0_dt0.0005", "M1_dt0.0005", "M1L_dt0.0005", "M2_dt0.0005",
+         "M0s_dt0.0005", "M2s_dt0.0005", "M0s+e10_dt0.0005", "M2s+e10_dt0.0005", "M0s+e100_dt0.0005",
+         "M2s+e100_dt0.0005"]
 cfgs = [c for c in order if (root / c).is_dir()] + sorted(
     p.name for p in root.iterdir() if p.is_dir() and p.name not in order)
 
 metrics = [("pen_max_mm", "max penetration (mm)", False),
            ("fn_peak_kN", "peak normal force (kN)", True),
            ("slip_mm_sum", "slip while loaded, sum (mm)", True)]
-fig, axes = plt.subplots(1, 3, figsize=(15, 4.2))
+fig, axes = plt.subplots(1, 3, figsize=(16, 5.2))
 for ax, (key, label, logy) in zip(axes, metrics):
   data, names = [], []
   for c in cfgs:
@@ -29,9 +31,9 @@ for ax, (key, label, logy) in zip(axes, metrics):
             if json.loads(f.read_text()).get("fell")]
     if vals:
       data.append(vals)
-      names.append(f"{c}\n(n={len(vals)})")
+      names.append(c.replace("_dt", "\n"))
   ax.boxplot(data, showfliers=True)
-  ax.set_xticks(range(1, len(names) + 1), names, rotation=30, fontsize=7)
+  ax.set_xticks(range(1, len(names) + 1), names, rotation=90, fontsize=7)
   ax.set_title(label)
   if logy:
     ax.set_yscale("log")
