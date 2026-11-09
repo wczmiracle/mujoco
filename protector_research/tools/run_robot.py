@@ -99,6 +99,7 @@ def main():
   ap.add_argument("--after", type=float, default=6.0, help="seconds recorded after the push")
   ap.add_argument("--out", type=Path, required=True)
   ap.add_argument("--no-quality", action="store_true", help="do not write contact_quality.csv")
+  ap.add_argument("--impratio", type=float, default=0.0, help=">0: elliptic cone with this impratio")
   ap.add_argument("--lean", action="store_true",
                   help="disable the simulator's own CSVs and contact export (keeps joint_state + contact_quality)")
   args = ap.parse_args()
@@ -118,6 +119,9 @@ def main():
       raise SystemExit("--m2-yaml is required for M2/M2s/M0s")
     env["PROTECTOR_M2_YAML"] = str(args.m2_yaml.resolve())
     shutil.copy2(args.m2_yaml, out / "m2_links.yaml")
+  if args.impratio > 0:
+    env["PROTECTOR_CONE"] = "elliptic"
+    env["PROTECTOR_IMPRATIO"] = f"{args.impratio:g}"
   if args.dt > 0:
     env["PROTECTOR_SIM_TIMESTEP"] = f"{args.dt:.9g}"
   procs = []

@@ -29,17 +29,19 @@ def yaml_for(method):
 
 root = Path.home() / "data/mujoco_logs/protector_research" / args.tag
 for cfg in args.configs:
-  method, dt = cfg.split(":")
+  method_tag, dt = cfg.split(":")
+  method, _, ir = method_tag.partition("+e")  # e.g. M2s+e10 -> elliptic cone, impratio 10
   for force in args.forces:
     for d in DIRS:
-      out = root / f"{method}_dt{dt}" / f"dir{d:03d}_F{force:g}"
+      out = root / f"{method_tag}_dt{dt}" / f"dir{d:03d}_F{force:g}"
       if (out / "score.json").exists():
         continue
-      print(f"[batch] {method} dt={dt} dir={d} F={force}", flush=True)
+      print(f"[batch] {method_tag} dt={dt} dir={d} F={force}", flush=True)
       r = subprocess.run([sys.executable, str(HERE / "tools/run_robot.py"), "--method", method,
                           "--dt", dt, "--direction", str(d), "--force", str(force), "--out", str(out)]
                          + (["--m2-yaml", yaml_for(method)] if yaml_for(method) else [])
-                         + (["--lean"] if args.lean else []))
+                         + (["--lean"] if args.lean else [])
+                         + (["--impratio", ir] if ir else []))
       if r.returncode == 0 and (out / "contact_quality.csv").exists():
         subprocess.run([sys.executable, str(HERE / "score_robot.py"), str(out)], stdout=subprocess.DEVNULL)
 print("[batch] done", root)
