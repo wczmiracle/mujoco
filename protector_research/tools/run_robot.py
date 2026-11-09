@@ -90,6 +90,9 @@ def main():
   ap.add_argument("--delay", type=float, default=4.0, help="seconds before the push")
   ap.add_argument("--after", type=float, default=6.0, help="seconds recorded after the push")
   ap.add_argument("--out", type=Path, required=True)
+  ap.add_argument("--no-quality", action="store_true", help="do not write contact_quality.csv")
+  ap.add_argument("--lean", action="store_true",
+                  help="disable the simulator's own CSVs and contact export (keeps joint_state + contact_quality)")
   args = ap.parse_args()
 
   if any(subprocess.run(["pgrep", "-f", p], capture_output=True).stdout for p in KILL_PATTERNS):
@@ -99,7 +102,9 @@ def main():
   out.mkdir(parents=True, exist_ok=True)
   backup = out / "pm_v2.yaml.orig"
   shutil.copy2(PM_INST, backup)
-  env = dict(os.environ, PROTECTOR_QUALITY_CSV=str(out / "contact_quality.csv"))
+  env = dict(os.environ)
+  if not args.no_quality:
+    env["PROTECTOR_QUALITY_CSV"] = str(out / "contact_quality.csv")
   if args.dt > 0:
     env["PROTECTOR_SIM_TIMESTEP"] = f"{args.dt:.9g}"
   procs = []
@@ -112,10 +117,16 @@ def main():
         cwd=WS, env=env, stdout=ctrl_log, stderr=subprocess.STDOUT, start_new_session=True))
     time.sleep(3)
     sim_log = open(out / "sim.log", "w")
+    if args.lean:
+      csv_args = ("export_contact:=false save_contact_csv:=false save_perturbation_csv:=true "
+                  "save_joint_state_csv:=true save_policy_switch_csv:=false save_link_kinetic_energy_csv:=false "
+                  "save_joint_forces_csv:=false save_sensor_vibration_csv:=false")
+    else:
+      csv_args = ("export_contact:=true save_contact_csv:=true save_perturbation_csv:=true "
+                  "save_joint_state_csv:=true save_policy_switch_csv:=true save_link_kinetic_energy_csv:=true "
+                  "csv_min_force_n:=0")
     sim_cmd = (f"{ENV_SETUP} && exec ros2 launch mujoco_simulator mujoco_simulator.launch.py "
-               f"headless:=true export_contact:=true save_contact_csv:=true save_perturbation_csv:=true "
-               f"save_joint_state_csv:=true save_policy_switch_csv:=true save_link_kinetic_energy_csv:=true "
-               f"csv_format:=csv csv_min_force_n:=0 csv_file_path:={out}")
+               f"headless:=true {csv_args} csv_format:=csv csv_file_path:={out}")
     procs.append(subprocess.Popen(["bash", "-c", sim_cmd], cwd=WS, env=env, stdout=sim_log,
                                   stderr=subprocess.STDOUT, start_new_session=True))
     # Wall clock ≈ sim time because the simulator is paced to real time.
