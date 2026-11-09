@@ -68,6 +68,13 @@ def configure(method: str, direction: float, force: float, delay: float) -> str:
     text = set_in_block(text, "protection", "enabled", "true")
     text = set_in_block(text, "protection", "use_protector_map", "true")
     text = set_in_block(text, "protection", "force_method", "chr")
+  elif method == "M1L":  # CHR scaling, per-link thickness (protected_links + link_thickness_mm)
+    text = set_in_block(text, "protection", "enabled", "true")
+    text = set_in_block(text, "protection", "use_protector_map", "false")
+    text = set_in_block(text, "protection", "use_protected_links", "true")
+    text = set_in_block(text, "protection", "force_method", "chr")
+  elif method == "M2":  # compliant contact params per link (PROTECTOR_M2_YAML); no force scaling
+    text = set_in_block(text, "protection", "enabled", "false")
   else:
     raise ValueError(method)
   return text
@@ -83,7 +90,8 @@ def kill_all():
 
 def main():
   ap = argparse.ArgumentParser()
-  ap.add_argument("--method", choices=["M0", "M1"], required=True)
+  ap.add_argument("--method", choices=["M0", "M1", "M1L", "M2"], required=True)
+  ap.add_argument("--m2-yaml", type=Path, default=None, help="per-link contact params for M2 (make_m2_yaml.py)")
   ap.add_argument("--dt", type=float, default=0.0, help="override timestep (s); 0 = keep XML")
   ap.add_argument("--direction", type=float, default=0.0)
   ap.add_argument("--force", type=float, default=200.0)
@@ -105,6 +113,11 @@ def main():
   env = dict(os.environ)
   if not args.no_quality:
     env["PROTECTOR_QUALITY_CSV"] = str(out / "contact_quality.csv")
+  if args.method == "M2":
+    if not args.m2_yaml:
+      raise SystemExit("--m2-yaml is required for M2")
+    env["PROTECTOR_M2_YAML"] = str(args.m2_yaml.resolve())
+    shutil.copy2(args.m2_yaml, out / "m2_links.yaml")
   if args.dt > 0:
     env["PROTECTOR_SIM_TIMESTEP"] = f"{args.dt:.9g}"
   procs = []
