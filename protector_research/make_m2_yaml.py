@@ -21,7 +21,24 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--fit", type=Path, required=True)
 ap.add_argument("--density", type=float, default=0.4)
 ap.add_argument("--out", type=Path, required=True)
+ap.add_argument("--bare-all", action="store_true",
+                help="M0s: every non-foot robot body gets the bare-ground group fit (t=0) instead")
 args = ap.parse_args()
+
+if args.bare_all:
+  import mujoco
+  fit = [r for r in json.loads(args.fit.read_text()) if r["mode"] == "group" and r["t_mm"] == 0]
+  assert len(fit) == 1, "need the group fit file with the bare (t=0) entry"
+  prm = fit[0]["params"]["0"]
+  m = mujoco.MjModel.from_xml_path(str(PM.parent.parent / "resource/pm_v2.xml"))
+  bodies = sorted({mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, m.geom_bodyid[g]) for g in range(m.ngeom)
+                   if m.geom_bodyid[g] > 0 and (m.geom_contype[g] or m.geom_conaffinity[g])})
+  bodies = [b for b in bodies if not any(k in b.upper() for k in ("FOOT", "ANKLE"))]
+  links = {b: {"thickness_mm": 0.0, "solref": prm["solref"], "solimp": prm["solimp"]} for b in bodies}
+  doc = {"source_fit": str(args.fit), "mode": "bare_all", "dt": fit[0]["dt"], "links": links}
+  args.out.write_text(yaml.safe_dump(doc, sort_keys=False))
+  print(args.out, len(links), "bodies", prm)
+  raise SystemExit
 
 prot = yaml.safe_load(PM.read_text())["protection"]
 fit = [r for r in json.loads(args.fit.read_text()) if r["mode"] == "joint" and r["density"] == args.density]
