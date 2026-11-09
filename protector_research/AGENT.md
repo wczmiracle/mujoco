@@ -44,7 +44,7 @@ ROS 仿真器改动在工作空间分支 `protector-sim`（只在本地提交）
 
 **注意：** install 下的 `pm_v2.yaml` 是指向 src 的软链接。`run_robot.py` 运行期间会临时修改它，结束时从备份恢复。批量运行期间不要提交这个文件；批量结束后用 `git diff` 确认它已恢复。同一时间只能运行一个仿真。
 
-环境：`protector_research/.venv`（MuJoCo 3.2.3，与机器人仿真一致）。MuJoCo 4.0 的 `simulate` 在 `../build/bin/`；M3 需要 4.0 的 Python 绑定，从源码编译。
+环境：`protector_research/.venv`（MuJoCo 3.2.3，与机器人仿真一致）；`protector_research/.venv4`（MuJoCo 4.0.1 + Python 3.12，由 `tools/build_mj4_python.sh` 构建，用于 M3：`drop_m3.py`、`drop_m3_snh.py`）。MuJoCo 4.0 的 `simulate` 在 `../build/bin/`。
 大的运行输出放 `runs/`（不进 git），图放 `runs/figs/`（邮件会附上新图）。
 
 ## 规则
