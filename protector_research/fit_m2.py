@@ -144,6 +144,7 @@ def main():
   ap.add_argument("--maxiter", type=int, default=100)
   ap.add_argument("--joint", action="store_true")
   ap.add_argument("--only", type=str, default="", help="group mode: e.g. 12:0.4")
+  ap.add_argument("--seed", type=int, default=0)
   ap.add_argument("--max-e", type=float, default=None, help="override MAX_RESTITUTION (default 0.6)")
   ap.add_argument("--density", type=float, default=None, help="joint mode: fit only this density")
   ap.add_argument("--holdout-h", type=float, default=None,
@@ -185,7 +186,7 @@ def main():
       contacts_of = lambda x, th=th: [decode(x, th)] * len(rows)
       bounds = BOUNDS
     res = optimize(lambda x: score(sim, contacts_of(x), speeds, targets, limits, phases)[0],
-                   bounds, args.maxiter, seed=0)
+                   bounds, args.maxiter, seed=args.seed)
     fit_rows = rows
     if args.holdout_h is not None:  # evaluate on all heights, held-out ones included
       rows = all_rows

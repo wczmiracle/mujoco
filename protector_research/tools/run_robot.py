@@ -99,6 +99,9 @@ def main():
   ap.add_argument("--after", type=float, default=6.0, help="seconds recorded after the push")
   ap.add_argument("--out", type=Path, required=True)
   ap.add_argument("--no-quality", action="store_true", help="do not write contact_quality.csv")
+  ap.add_argument("--csv-min-force", type=float, default=0.0,
+                  help="simulator contact CSV threshold in N (user's collection scripts use 400)")
+  ap.add_argument("--extra-sim-args", default="", help="appended to the simulator launch (later args win)")
   ap.add_argument("--impratio", type=float, default=0.0, help=">0: elliptic cone with this impratio")
   ap.add_argument("--lean", action="store_true",
                   help="disable the simulator's own CSVs and contact export (keeps joint_state + contact_quality)")
@@ -141,9 +144,9 @@ def main():
     else:
       csv_args = ("export_contact:=true save_contact_csv:=true save_perturbation_csv:=true "
                   "save_joint_state_csv:=true save_policy_switch_csv:=true save_link_kinetic_energy_csv:=true "
-                  "csv_min_force_n:=0")
+                  f"csv_min_force_n:={args.csv_min_force:g}")
     sim_cmd = (f"{ENV_SETUP} && exec ros2 launch mujoco_simulator mujoco_simulator.launch.py "
-               f"headless:=true {csv_args} csv_format:=csv csv_file_path:={out}")
+               f"headless:=true {csv_args} csv_format:=csv csv_file_path:={out} {args.extra_sim_args}")
     procs.append(subprocess.Popen(["bash", "-c", sim_cmd], cwd=WS, env=env, stdout=sim_log,
                                   stderr=subprocess.STDOUT, start_new_session=True))
     # Wall clock ≈ sim time because the simulator is paced to real time.
