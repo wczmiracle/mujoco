@@ -36,7 +36,8 @@
 | `fit_m2.py` | M2 拟合：`--dt`；分组拟合（每厚度×密度一组），或 `--joint`（同密度共享材料参数，width ∝ 厚度） |
 | `summarize_m2.py`、`plot_m2.py` | 汇总拟合结果、画图到 `runs/figs/` |
 | `tools/run_robot.py` | 单次闭环摔倒：AMP 控制器 + 无界面仿真，推一次；`--method M0/M1 --dt --direction --force` |
-| `tools/batch_robot.py` | 16 场景（8 方向 × 200/300 N）批量跑，结果在 `~/data/mujoco_logs/protector_research/<tag>/` |
+| `tools/batch_continuous.py` | **批量闭环实验，默认用这个。** 连续模式：每个（方法, 推力）只启动一次控制器和仿真器，先跑一段热身（丢弃），之后每个实验用 `/mujoco/new_experiment` 触发 reset 并切换 CSV，与用户的 `automated_collection_continuous.sh` 一致。用户要求：不能每次重启 MuJoCo，否则初始化时容易摔 |
+| `tools/batch_robot.py` | 旧版：每次实验重启进程（已不推荐，只保留用于复现早期结果） |
 | `score_robot.py` | 读 `contact_quality.csv`，按 body 输出穿透、峰值力、滑移距离、有效质量 |
 | `tools/send_report.py` | 每小时邮件报告 |
 
