@@ -26,6 +26,11 @@ FEET = ("ANKLE", "FOOT")
 
 def score(run: Path) -> dict:
   df = pd.read_csv(run / "contact_quality.csv")
+  # Continuous mode: the file is switched just before the asynchronous reset, so it can start with the
+  # tail of the previous experiment. Keep only rows after the last time rollback.
+  back = np.where(np.diff(df.time.to_numpy()) < -1e-9)[0]
+  if len(back):
+    df = df.iloc[back[-1] + 1:]
   df = df[~df.body.str.upper().str.contains("|".join(FEET))]
   out = {"run": run.name, "bodies": {}}
   if df.empty:
