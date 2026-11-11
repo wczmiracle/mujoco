@@ -41,7 +41,7 @@
 | `score_robot.py` | 读 `contact_quality.csv`，按 body 输出穿透、峰值力、滑移距离、有效质量 |
 | `tools/send_report.py` | 每小时邮件报告 |
 
-ROS 仿真器改动在工作空间分支 `protector-sim`（只在本地提交）：设置环境变量 `PROTECTOR_QUALITY_CSV=<路径>` 后，每个物理步写一份接触质量 CSV；设置 `PROTECTOR_SIM_TIMESTEP=<秒>` 可覆盖 timestep。改完 C++ 后执行 `colcon build --packages-select mujoco_simulator`。
+ROS 仿真器改动在工作空间分支 `protector-sim2`（基于最新 `bench`，只在本地提交；旧的 `protector-sim` 基于修复前的 bench，已不再使用）：设置环境变量 `PROTECTOR_QUALITY_CSV=<路径>` 后，每个物理步写一份接触质量 CSV；设置 `PROTECTOR_SIM_TIMESTEP=<秒>` 可覆盖 timestep。改完 C++ 后执行 `colcon build --packages-select mujoco_simulator`。
 
 **注意：** install 下的 `pm_v2.yaml` 是指向 src 的软链接。`run_robot.py` 运行期间会临时修改它，结束时从备份恢复。批量运行期间不要提交这个文件；批量结束后用 `git diff` 确认它已恢复。同一时间只能运行一个仿真。
 
