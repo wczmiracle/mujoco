@@ -481,7 +481,7 @@
    - CHR 外推（5.487 kg，F_before = m·v / 0.26554 ms）：1.5 / 2.0 / 2.5 / 3.0 m 时，6 mm 为 40 / 52 / 65 / 77 kN，12 mm 为 18 / 24 / 29 / 34 kN，18 mm 为 11 / 15 / 18 / 21 kN，24 mm 为 8 / 11 / 13 / 15 kN。
    - 当前 M2 的外推与之相比：12/18/24 mm 高 10–40%；6 mm 偏低（模型中压到底）。
    - 做法：把 CHR 在 1.5–3 m × 4 种厚度的值作为 16 个合成目标，与 data1 的 12 个实测点一起重新拟合联合模型（`fit_m2.py --chr-heights 1.5 2.0 2.5 3.0`，dt 0.5 ms，ρ0.4，3 个种子），运行中。
-3. **`LINK_BASE_LINK` → `LINK_BASE`**：已在工作空间 `bench` 本地提交 `03305db8`（只改 `pm_v2.yaml` 这一行），**尚未推送**。工作区里 `scripts/fig2-3_prepare_contact_force_grid.py` 有用户自己的未提交修改，未触碰。
+3. **`LINK_BASE_LINK` → `LINK_BASE`**：工作空间 `bench` 提交 `03305db8`（只改 `pm_v2.yaml` 这一行），已按用户确认推送到 NUS-HcRL `bench`（`60067ddd..03305db8`）。工作区里 `scripts/fig2-3_prepare_contact_force_grid.py` 有用户自己的未提交修改，未触碰。
 
 ## 2026-11-11 20:40  加入 CHR 高力目标后的联合模型
 
