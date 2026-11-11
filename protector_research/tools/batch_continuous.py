@@ -32,7 +32,7 @@ def ros_pub(topic, msg_type, data):
                  cwd=WS, capture_output=True, timeout=30)
 
 
-def run_session(method, ir, dt, force, dirs, root, m2_yaml, delay, after, lean):
+def run_session(method, ir, dt, force, dirs, root, m2_yaml, delay, after, lean, extra=""):
   sess = root / f"{method}{'+e' + ir if ir else ''}_dt{dt}"
   todo = [(d, sess / (f"dir{d:05.1f}_F{force:g}")) for d in dirs]
   todo = [(d, o) for d, o in todo if not (o / "score.json").exists()]
@@ -66,7 +66,7 @@ def run_session(method, ir, dt, force, dirs, root, m2_yaml, delay, after, lean):
     time.sleep(3)
     procs.append(subprocess.Popen(
         ["bash", "-c", f"{ENV_SETUP} && exec ros2 launch mujoco_simulator mujoco_simulator.launch.py "
-                       f"headless:=true {csv_args} csv_format:=csv csv_file_path:={warm}"],
+                       f"headless:=true {csv_args} csv_format:=csv csv_file_path:={warm} {extra}"],
         cwd=WS, env=env, stdout=open(sess / f"sim_F{force:g}.log", "w"), stderr=subprocess.STDOUT,
         start_new_session=True))
     time.sleep(5.0 + delay + FORCE_DURATION + after)  # warm-up segment, discarded
@@ -105,6 +105,7 @@ def main():
   ap.add_argument("--delay", type=float, default=4.0)
   ap.add_argument("--after", type=float, default=6.0)
   ap.add_argument("--lean", action="store_true", help="disable link kinetic energy CSV (needed for dt 0.2 ms)")
+  ap.add_argument("--extra-sim-args", default="", help="appended to the simulator launch, e.g. save_pm_qpos_trajectory:=true")
   a = ap.parse_args()
   yamls = dict(kv.split("=", 1) for kv in a.m2_yaml.split(",") if kv)
   root = Path.home() / "data/mujoco_logs/protector_research" / a.tag
@@ -112,7 +113,7 @@ def main():
     tag, dt = cfg.split(":")
     method, _, ir = tag.partition("+e")
     for force in a.forces:
-      run_session(method, ir, dt, force, a.dirs, root, yamls.get(method), a.delay, a.after, a.lean)
+      run_session(method, ir, dt, force, a.dirs, root, yamls.get(method), a.delay, a.after, a.lean, a.extra_sim_args)
   print("[cont] done", root, flush=True)
 
 
