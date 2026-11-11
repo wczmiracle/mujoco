@@ -137,6 +137,25 @@ def report_rows(rows_df, diag):
   return out
 
 
+def add_chr_targets(tg, heights, density):
+  """Synthetic high-force targets from the CHR fit used by the simulator (user decision 2026-11-11:
+  no new drop tests; approximate the high-force range with the CHR function)."""
+  import pandas as pd
+  p = json.loads(Path("/home/wang22/engineai/engineai_ros2_workspace/scripts/ThicknessCalculate/"
+                      "fitted_parameters.json").read_text())
+  from drop import BARE_PULSE_S
+  rows = []
+  for t in [6.0, 12.0, 18.0, 24.0]:
+    for h in heights:
+      v = float(np.sqrt(2 * 9.81 * h))
+      fb_kN = IMPACTOR_MASS * v / BARE_PULSE_S / 1e3
+      f_kN = p["C"] * t ** p["alpha"] * density ** p["beta"] * fb_kN ** p["gamma"]
+      rows.append(dict(t_mm=t, density=density, h=h, v=v, Fpk_N=f_kN * 1e3, source="chr"))
+  tg = tg.copy()
+  tg["source"] = "data1"
+  return pd.concat([tg, pd.DataFrame(rows)], ignore_index=True)
+
+
 def main():
   ap = argparse.ArgumentParser()
   ap.add_argument("--dt", type=float, required=True)
@@ -145,6 +164,8 @@ def main():
   ap.add_argument("--joint", action="store_true")
   ap.add_argument("--only", type=str, default="", help="group mode: e.g. 12:0.4")
   ap.add_argument("--seed", type=int, default=0)
+  ap.add_argument("--chr-heights", type=float, nargs="*", default=[],
+                  help="add CHR-formula targets at these drop heights (m) for t=6/12/18/24 mm (high-force range)")
   ap.add_argument("--max-e", type=float, default=None, help="override MAX_RESTITUTION (default 0.6)")
   ap.add_argument("--density", type=float, default=None, help="joint mode: fit only this density")
   ap.add_argument("--holdout-h", type=float, default=None,
@@ -159,6 +180,8 @@ def main():
   tg = load_targets()
   if args.density is not None:
     tg = tg[(tg.density == args.density) | (tg.t_mm == 0)]
+  if args.chr_heights:
+    tg = add_chr_targets(tg, args.chr_heights, args.density if args.density is not None else 0.4)
   results = []
 
   if args.joint:
