@@ -458,3 +458,17 @@
 - 做法：在工作空间 `bench` 上单独提交 `60067ddd`，**只改** `sim_manager.cc` 里三处时间单位换算（纳秒 → 秒），不包含研究用的日志和环境变量开关（那些仍只在 `protector-sim` 分支）。
 - 验证：`bench` 编译后的二进制里没有任何 `PROTECTOR_` 开关；推力前 4 s + 推力后 6 s 的运行，仿真时长 10.73 s，即 1.00 倍实时（bug 版同样设置为 16 s 以上）。
 - 状态：`bench` 领先 `origin/bench` 1 个提交，**尚未推送**（远程是共享仓库 NUS-HcRL，等用户确认）。工作空间当前检出 `bench`，install 下的仿真器是 `bench` + 修复的版本；继续研究时需切回 `protector-sim` 并重新编译。
+
+## 2026-11-11 10:50  `LINK_BASE_LINK` 写错是否影响论文数据：没有影响
+
+- 用户问：如果 `LINK_BASE_LINK` 有问题，为什么 `OutputFigures/fig2-3_prepare_contact_force.png` 里骨盆没有红色？
+- 查证：
+  - 该图由 `scripts/fig2-3_prepare_contact_force_grid.py` 生成：Only protector = **P2d**，Only active falling = **P5**，Integrated = **P6**；场景 S1/S2/S4。
+  - `scripts/run_sample_plan.sh` 中：P2d 为 `set_protection true false`（护具开，**不**限定名单，全身所有 link 都有护具）；P5 为护具关；P6 为 `set_protection true true`（护具开，**只保护名单里的 link**）。所以名单里的 `LINK_BASE_LINK` 只会影响 P6。
+  - 原始 contact CSV（≥ 400 N 才记录；body 名带引号）中骨盆 `"LINK_BASE"` 的接触行数：P2d_S1 为 1241；**P5_S1 为 0；P6 的 S1、S2、S4×4 全部为 0**。
+  - P6_S1 中名单内的 link 都有被衰减的行（`protection_scale < 1`），名单外的（肘偏航、躯干）衰减行为 0，说明名单机制本身按预期生效。
+- 结论：
+  1. **对论文数据没有影响。** 唯一受影响的 P6 中，骨盆从来没有以 ≥ 400 N 着地（主动摔倒策略避开了骨盆），所以有没有护具结果都一样。图中 P6 栏整体都没有红色，骨盆没红是因为没被撞到，而不是因为它被保护了。
+  2. P2d 里骨盆有着地，并且是全身护具模式，骨盆是被保护的。
+  3. 仍建议把名字改成 `LINK_BASE`，避免以后在按名单保护的模式下，骨盆被撞时漏掉护具。我自己的 M1L/M2 测试同样受这个名单影响，但候选方案 M2s 已经给骨盆用了刚性裸地参数。
+- 更正：中途用 `grep ",LINK_BASE,"` 计数得到全 0 是错的（CSV 中名字带引号），已改用 `"LINK_BASE"` 重新计数；pandas 解析的 P6_S1 结果不受影响。
