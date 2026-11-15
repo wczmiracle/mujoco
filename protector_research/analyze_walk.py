@@ -45,7 +45,7 @@ for run in sorted(Path(sys.argv[1]).expanduser().glob("*_vx*_r*")):
   vfwd = w.vx * np.cos(yaw) + w.vy * np.sin(yaw)  # world velocity projected on heading
   vlat = -w.vx * np.sin(yaw) + w.vy * np.cos(yaw)
   roll, pitch = roll_pitch(q)
-  m = re.match(r"(bug|fixed)_vx([\d.]+)_r(\d+)", run.name)
+  m = re.match(r"(bug|fixed|mat)_vx([\d.]+)_r(\d+)", run.name)
   rows.append(dict(mode=m.group(1), vx_cmd=float(m.group(2)), rep=int(m.group(3)), sim_s=round(dur, 1),
                    policy_hz=updates / dur, v_fwd=vfwd.mean(), v_lat=vlat.mean(),
                    yaw_rate_deg_s=np.degrees(np.unwrap(yaw)[-1] - np.unwrap(yaw)[0]) / dur,

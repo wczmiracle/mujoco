@@ -34,7 +34,7 @@ def set_speed(text: str, vx: float) -> str:
   return out
 
 
-def one_run(out: Path, vx: float, bug: bool, wall: float):
+def one_run(out: Path, vx: float, bug: bool, wall: float, material: bool = False):
   if any(subprocess.run(["pgrep", "-f", p], capture_output=True).stdout for p in KILL_PATTERNS):
     raise SystemExit("another simulator/controller is running")
   out.mkdir(parents=True, exist_ok=True)
@@ -49,6 +49,8 @@ def one_run(out: Path, vx: float, bug: bool, wall: float):
     pm = PM_INST.read_text()
     pm = set_in_block(pm, "perturbation", "auto_sampling", "false")
     pm = set_in_block(pm, "protection", "enabled", "false")
+    if material:
+      pm = set_in_block(pm, "contact_material", "enabled", "true")
     PM_INST.write_text(pm)
     XZL.write_text(set_speed(XZL.read_text(), vx))
     procs.append(subprocess.Popen(
@@ -78,14 +80,15 @@ def main():
   ap.add_argument("--speeds", nargs="+", type=float, default=[0.0, 0.5, 1.0])
   ap.add_argument("--repeats", type=int, default=2)
   ap.add_argument("--wall", type=float, default=25.0, help="wall-clock seconds per run after launch")
+  ap.add_argument("--material", action="store_true", help="contact_material mode (no bug emulation runs)")
   a = ap.parse_args()
   root = Path.home() / "data/mujoco_logs/protector_research" / a.tag
-  for vx, bug, rep in itertools.product(a.speeds, [False, True], range(a.repeats)):
-    out = root / f"{'bug' if bug else 'fixed'}_vx{vx:.1f}_r{rep}"
+  for vx, bug, rep in itertools.product(a.speeds, [False] if a.material else [False, True], range(a.repeats)):
+    out = root / f"{'mat' if a.material else ('bug' if bug else 'fixed')}_vx{vx:.1f}_r{rep}"
     if (out / "base_state.csv").exists():
       continue
     print(f"[walk] {out.name}", flush=True)
-    one_run(out, vx, bug, a.wall)
+    one_run(out, vx, bug, a.wall, a.material)
   print("[walk] done", root, flush=True)
 
 
