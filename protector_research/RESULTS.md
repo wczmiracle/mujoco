@@ -682,3 +682,20 @@
   - 按质量换算（k = K / 有效质量）是让等效刚度回到固定的 K，即所有 link 真正撞在同一块垫子上；配置层面仍只有一套材料参数（K、B、`solimp` 形状），换算由代码在每个接触自动完成。有效质量是接触点法向上的质量，随姿态变化，不是 link 本身的质量。
   - 公司统一用一个碰撞参数适用于行走/脚底接触这类不关心冲击力数值的场景；本研究需要定量冲击力时，这一特性才会造成偏差。
 - 给用户的两个选项：(1) 保持现有 M2（每种厚度一组参数，不改代码逻辑；有效质量接近 5.5 kg 时准确）；(2) 加按质量换算（一套材料参数，大质量冲击物理自洽，需改仿真器步进流程，约半天）。等待用户决定。
+
+## 2026-11-16 01:15  用户决定：按材料模型实现；仿真冲击须与实测一致；重跑 sample_plan 出新图
+
+- 用户要求：按"同一块材料、按接触有效质量换算"的方案实现并调参；仿真冲击要与实测（Fig. 2c 的测量点和拟合关系）一致；之后重跑 sample_plan，给出 `fig2-1_prepare_compare_risks_of_different_materials`、`fig2-2_compare_risks_of_4_falling_rot90`、`fig2-3_compare_risks_of_4_falling_rot90` 的新结果（旧数据、旧图不删，新图另行命名）；并查明硅胶仿真参数的来源。
+- 论文核对：Fig. 2c 为 SRM（ρ0.4）的 `F_pk = 0.0452·t^-1.16·F^1.88`（= CHR，C·0.4^β），实测为 EN 1621-1 式落锤（名义 5 kg 方形冲头、100 mm 圆砧、25 kHz 采样）。Methods 中的"Equivalent protection in simulation"即 M1。
+- **仿真器实现**（工作空间分支 `protector-sim2`）：
+  - `pm_v2.yaml` 新增 `contact_material` 块（默认 `enabled: false`）：`file`、`timestep`（0.0005）、`cone`（elliptic）、`impratio`（10）。
+  - 开启后：所有非脚部 link 与地面的接触按材料建模；护具 link（`protection.enabled` + 名单/全身，厚度同 `thickness` / `link_thickness_mm`）用 SRM 或硅胶（由 `chr_params_file` 是否含 silicone 决定），其余 link 用 bare（铝合金外壳）；CHR 缩放自动关闭。
+  - 自写 `Step1()` 复现 MuJoCo 3.2.3 的 `mj_step1`，在 `mj_collision` 与 `mj_makeConstraint` 之间逐接触改写：`solref = (−K(t)/m_n, −B(t)/m_n)`，`m_n = 1/(d·A + (1−d)·Â)`，其中 A = Jn·M⁻¹·Jnᵀ（当前姿态），Â = `body_invweight0`（MuJoCo 正则项所用的 qpos0 近似），d 按 3.2.3 的 `getimpedance` 计算。这样在标量近似下接触力 = d·(K·r + B·ṙ)，与质量无关，与落锤标定（A = Â = 1/m）一致。
+  - 材料参数文件 `assets/config/protector_materials.yaml`（`make_materials_yaml.py` 生成）。
+- **材料标定**（`fit_material.py`，dt 0.5 ms，5.487 kg，含 10/20/40 kg 大质量约束）：
+  - SRM：data1 ρ0.4 + 1 m 以上 CHR 目标（`runs/m2dh_dt0.0005_s2.json`）。
+  - 硅胶：按 `fitted_parameters_silicone.json`（γ = 1）在 0.1–3 m × 6/12/24 mm 生成目标；RMS 1%、最大 4%，约束满足。
+  - bare：m·v/Δt，0.1–1 m；大质量行的压入上限放宽为 max(2 mm, 1.5·v·dt)（0.5 ms 一步之内 40 kg、4.3 m/s 就已前进 2.15 mm）。结果约为目标的 70%（0.5 ms 解析不了约 0.2 ms 的钢对钢脉冲），压入 0.5–1.7 mm，回弹约 0.65。
+- **验证图**（Fig. 2c 形式）`runs/figs/material_validation_fig2c_style.png`：SRM 的 MuJoCo 结果沿 Fig. 2c 拟合线分布；相对实测，中高力 8 点在 ±24% 以内（12 mm / 0.8–1 m 为 +1% / −1%），低力端偏高（6 mm / 0.1 m +44%，12 mm / 0.1 m +67%，为大质量压到底约束的代价）。硅胶与目标关系几乎重合。bare 约为 70%。
+- **硅胶参数来源**：仓库中只有 `fitted_parameters_silicone_meta.json`（按 1 m 时 6/12/24 mm = 27.6/16.1/9.1 kN 标定，γ 取 1，引用文献仅为定性结论）。12 mm 的 16.1 kN 与论文 Fig. 2a 的实测比较一致（SRM 衰减 87.2%，约为硅胶的 1.1 倍）；6/24 mm 与 γ = 1 无实测来源。网络检索未找到硅胶护垫"厚度–峰值力"的直接数据（EN 1621 类测试中硅胶涂层护垫在 12.5–25 J 时透射力 14–32 kN；硅胶冲击性能随硬度、温度变化）。
+- 下一步：闭环冒烟测试（MAT0 / MATL，各 8 方向），通过后重跑 P2d、P2sid、P3、P4、P5、P6（每个 1050 次，约 19 小时）到新目录，再出新图。

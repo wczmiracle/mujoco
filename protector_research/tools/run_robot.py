@@ -73,6 +73,15 @@ def configure(method: str, direction: float, force: float, delay: float) -> str:
     text = set_in_block(text, "protection", "use_protector_map", "false")
     text = set_in_block(text, "protection", "use_protected_links", "true")
     text = set_in_block(text, "protection", "force_method", "chr")
+  elif method == "MAT0":  # contact_material mode, no protector (bare shell material on all non-foot links)
+    text = set_in_block(text, "contact_material", "enabled", "true")
+    text = set_in_block(text, "protection", "enabled", "false")
+  elif method == "MATL":  # contact_material mode, SRM on protected_links with link_thickness_mm
+    text = set_in_block(text, "contact_material", "enabled", "true")
+    text = set_in_block(text, "protection", "enabled", "true")
+    text = set_in_block(text, "protection", "use_protector_map", "false")
+    text = set_in_block(text, "protection", "use_protected_links", "true")
+    text = set_in_block(text, "protection", "chr_params_file", "fitted_parameters.json")
   elif method in ("M2", "M2s", "M0s"):  # per-link contact params from PROTECTOR_M2_YAML; no force scaling
     text = set_in_block(text, "protection", "enabled", "false")
   else:
@@ -90,7 +99,7 @@ def kill_all():
 
 def main():
   ap = argparse.ArgumentParser()
-  ap.add_argument("--method", choices=["M0", "M1", "M1s", "M1L", "M2", "M2s", "M0s"], required=True)
+  ap.add_argument("--method", choices=["M0", "M1", "M1s", "M1L", "M2", "M2s", "M0s", "MAT0", "MATL"], required=True)
   ap.add_argument("--m2-yaml", type=Path, default=None, help="per-link contact params for M2 (make_m2_yaml.py)")
   ap.add_argument("--dt", type=float, default=0.0, help="override timestep (s); 0 = keep XML")
   ap.add_argument("--direction", type=float, default=0.0)
