@@ -46,7 +46,7 @@ def run_session(method, ir, dt, force, dirs, root, m2_yaml, delay, after, lean, 
   backup = sess / f"pm_v2.yaml.orig_F{force:g}"
   shutil.copy2(PM_INST, backup)
   env = dict(os.environ, PROTECTOR_QUALITY_CSV=str(warm / "contact_quality.csv"))
-  if method in ("M2", "M2s", "M0s"):
+  if method in ("M2", "M2s", "M0s", "M1s"):
     env["PROTECTOR_M2_YAML"] = str(Path(m2_yaml).resolve())
   if ir:
     env["PROTECTOR_CONE"] = "elliptic"
