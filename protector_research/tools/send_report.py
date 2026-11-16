@@ -6,7 +6,8 @@ which research jobs are running. Figures under runs/figs/ newer than the last ma
 SMTP credentials come from ~/.config/sample_plan_mail/env (MAIL_PROVIDER, MAIL_USER, MAIL_PASS,
 MAIL_TO), the same file the sampling scripts use; nothing secret lives in this repo.
 
-Usage: python tools/send_report.py [--dry-run] [--force]
+Usage: python tools/send_report.py [--dry-run] [--force] [--milestone TITLE --note-file FILE]
+--milestone mails a milestone report: subject "[护具研究] 节点：TITLE", the note file on top.
 Without --force, it skips mailing when nothing changed since the last mail.
 """
 
@@ -44,7 +45,7 @@ def load_state() -> dict:
   return {"time": 0.0, "results_len": 0, "head": ""}
 
 
-def build(state: dict) -> tuple[str, str, list[Path], bool]:
+def build(state: dict, milestone: str = "", note: str = "") -> tuple[str, str, list[Path], bool]:
   now = dt.datetime.now()
   text = RESULTS.read_text() if RESULTS.exists() else ""
   new_results = text[state["results_len"]:].strip() if len(text) >= state["results_len"] else text
@@ -57,14 +58,19 @@ def build(state: dict) -> tuple[str, str, list[Path], bool]:
                 key=lambda p: p.stat().st_mtime)[-MAX_ATTACH:] if FIGS.exists() else []
   changed = bool(new_results or commits or figs)
 
-  lines = [f"护具仿真研究 小时报告  {now:%Y-%m-%d %H:%M}", ""]
-  lines += ["## 本小时新增结果", new_results or "（RESULTS.md 无新增）", ""]
+  if milestone:
+    lines = [f"护具仿真研究 节点报告：{milestone}  {now:%Y-%m-%d %H:%M}", "", note.strip(), ""]
+  else:
+    lines = [f"护具仿真研究 小时报告  {now:%Y-%m-%d %H:%M}", ""]
+  lines += ["## RESULTS.md 新增" if milestone else "## 本小时新增结果", new_results or "（RESULTS.md 无新增）", ""]
   lines += ["## 新提交（wczmiracle/mujoco 分支 protector-research）", commits or "（无）", ""]
   lines += ["## 正在运行的任务", jobs or "（无）", ""]
   if figs:
     lines += ["## 附图", *[f"- {p.name}" for p in figs], ""]
   lines += ["完整记录：/home/wang22/engineai/mujoco/protector_research/RESULTS.md"]
   subject = f"[护具研究] {now:%m-%d %H:%M} " + ("有新结果" if changed else "无新进展")
+  if milestone:
+    subject = f"[护具研究] 节点：{milestone}"
   return subject, "\n".join(lines), figs, changed
 
 
@@ -96,9 +102,13 @@ def main() -> None:
   ap = argparse.ArgumentParser()
   ap.add_argument("--dry-run", action="store_true")
   ap.add_argument("--force", action="store_true", help="mail even if nothing changed")
+  ap.add_argument("--milestone", default="", help="milestone title (implies --force)")
+  ap.add_argument("--note-file", default="", help="text placed at the top of a milestone mail")
   args = ap.parse_args()
   state = load_state()
-  subject, body, figs, changed = build(state)
+  note = Path(args.note_file).read_text() if args.note_file else ""
+  subject, body, figs, changed = build(state, args.milestone, note)
+  args.force = args.force or bool(args.milestone)
   if args.dry_run:
     print(subject, "\n", body, "\nattach:", [p.name for p in figs])
     return

@@ -77,5 +77,6 @@ RESULTS.md 每条格式：
 ## 汇报
 
 - 每小时运行 `tools/send_report.py --force`，把 RESULTS.md 的新增内容、新提交、正在跑的任务和新图发到 `~/.config/sample_plan_mail/env` 里的 `MAIL_TO`。
-- 2026-11-16 起按用户要求**暂停**：会话内的小时定时任务已取消，不再自动发邮件；需要时手动运行 `tools/send_report.py --force`。若要与会话无关地持续发送，由用户自行加入 crontab：
+- 2026-11-16 晚用户要求：**每到重要节点发一封邮件汇报**（不定时），用 `tools/send_report.py --milestone "<标题>" --note-file runs/notes/<x>.txt`。小时定时邮件仍暂停。
+- 2026-11-16 起按用户要求**暂停**小时报告：会话内的小时定时任务已取消，不再自动发邮件；需要时手动运行 `tools/send_report.py --force`。若要与会话无关地持续发送，由用户自行加入 crontab：
   `7 * * * * cd /home/wang22/engineai/mujoco/protector_research && .venv/bin/python tools/send_report.py --force >> runs/logs/mail.log 2>&1`
