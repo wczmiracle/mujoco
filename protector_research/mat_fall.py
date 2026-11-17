@@ -85,9 +85,24 @@ class MatSim:
     if "nomat" in fx: return
     mn_floor = fx.get("mnfloor", 0.0); bmax = fx.get("clampb", 1.5)
     h = m.opt.timestep
+    pen_cap = fx.get("selfpen", 0.0)
+    couple = int(fx.get("couple", 0))  # 1: Schur over self-contacts on the same body, 2: over all self-contacts
+    selfrows = []  # (body1, body2, normal Jacobian row, M^-1 J^T)
+    if couple:
+      jp2 = np.zeros((3, m.nv))
+      for i in range(d.ncon):
+        c = d.contact[i]
+        b1, b2 = m.geom_bodyid[c.geom[0]], m.geom_bodyid[c.geom[1]]
+        if not (b1 and b2): continue
+        mujoco.mj_jac(m, d, self.jacp, None, c.pos, b1); mujoco.mj_jac(m, d, jp2, None, c.pos, b2)
+        js = c.frame[:3] @ (jp2 - self.jacp)
+        xs = np.zeros(m.nv); mujoco.mj_solveM(m, d, xs.reshape(1, -1), js.reshape(1, -1))
+        selfrows.append((b1, b2, js, xs))
     for i in range(d.ncon):
       c = d.contact[i]
       b1, b2 = m.geom_bodyid[c.geom[0]], m.geom_bodyid[c.geom[1]]
+      if pen_cap and b1 and b2 and c.dist < -pen_cap:
+        c.dist = -pen_cap  # robot self-contact: cap the penetration the constraint tries to undo
       if b1 == 0 and b2 != 0: g, b = c.geom[1], b2
       elif b2 == 0 and b1 != 0: g, b = c.geom[0], b1
       else: continue
@@ -97,6 +112,11 @@ class MatSim:
       jn = c.frame[:3] @ self.jacp
       x = np.zeros(m.nv); mujoco.mj_solveM(m, d, x.reshape(1, -1), jn.reshape(1, -1))
       A = jn @ x; Ahat = m.body_invweight0[b, 0]
+      rows = [r for r in selfrows if couple == 2 or b in (r[0], r[1])]
+      if rows:  # effective mass with the body's self-contacts held rigid (Schur complement)
+        JS = np.array([r[2] for r in rows]); XS = np.array([r[3] for r in rows])
+        a_is = XS @ jn; A_ss = JS @ XS.T
+        A = max(A - a_is @ np.linalg.lstsq(A_ss + 1e-9 * np.eye(len(rows)), a_is, rcond=None)[0], 0.02 * A)
       dimp = impedance(si, c.dist, c.includemargin)
       inv_mn = dimp * A + (1 - dimp) * Ahat
       if not inv_mn > mujoco.mjMINVAL: continue
@@ -106,6 +126,16 @@ class MatSim:
         km, bm = (1.5 / h) ** 2, 4.0 / h
         if k > km or bb > bm: self.n_clamped += 1
         k, bb = min(k, km), min(bb, bm)
+      elif self.clamp == "new" and "zclamp" in fx:
+        # damping-ratio preserving limit: scale k by s and b by sqrt(s) (zeta ~ b / sqrt(k) unchanged)
+        kfac = fx["zclamp"] if fx["zclamp"] is not True else 0.8
+        rd = dimp / si[1]; be0 = rd * bb * h; ke0 = rd * rd * k * h * h
+        sc = 1.0
+        if be0 > bmax: sc = (bmax / be0) ** 2
+        if ke0 > 0:
+          u = (-2 * kfac * be0 + np.sqrt((2 * kfac * be0) ** 2 + 16 * kfac * ke0)) / (2 * ke0)  # ke0 u^2 + 2 kfac be0 u - 4 kfac = 0
+          sc = min(sc, u * u)
+        if sc < 1: k *= sc; bb *= np.sqrt(sc); self.n_clamped += 1
       elif self.clamp == "new":
         rd = dimp / si[1]; be = rd * bb * h; cl = False
         if be > bmax: bb *= bmax / be; be = bmax; cl = True
