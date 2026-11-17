@@ -30,12 +30,13 @@ BARE_T = 1.0  # nominal "thickness" (mm) that scales width for the bare shell ma
 BARE_PEN = 0.002
 
 
-def targets(mat):
+def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1):
   hs = [0.1, 0.4, 0.8, 1.0]
   if mat == "srm":
     tg = load_targets()
     tg = tg[tg.density == 0.4]
-    return add_chr_targets(tg, [1.5, 2.0, 2.5, 3.0], 0.4).reset_index(drop=True)
+    tg = pd.concat([tg] * meas_weight).assign(source="data1")  # repeat measured rows = weight in the mean squared log error
+    return add_chr_targets(tg, list(chr_heights), 0.4).reset_index(drop=True) if chr_heights else tg.reset_index(drop=True)
   rows = []
   if mat == "silicone":
     p = json.loads((WS / "fitted_parameters_silicone.json").read_text())
@@ -61,14 +62,18 @@ def main():
   ap.add_argument("--seed", type=int, default=0)
   ap.add_argument("--maxiter", type=int, default=150)
   ap.add_argument("--out", type=Path, required=True)
+  ap.add_argument("--chr-heights", type=float, nargs="*", default=[1.5, 2.0, 2.5, 3.0],
+                  help="srm: heights (m) of CHR-extrapolated targets above the measured 1 m; none = measured only")
+  ap.add_argument("--meas-weight", type=int, default=1, help="srm: weight of measured rows relative to CHR rows")
+  ap.add_argument("--no-heavy", action="store_true", help="drop the 10/20/40 kg constraint rows")
   a = ap.parse_args()
-  tg = targets(a.material)
+  tg = targets(a.material, a.chr_heights, a.meas_weight)
   sim = FastDrop(a.dt, IMPACTOR_MASS)
   speeds, tgt = tg.v.to_numpy(), tg.Fpk_N.to_numpy()
   limits = np.array([pen_lim(a.material, t) for t in tg.t_mm])
   contacts = lambda x: [material(x, t, IMPACTOR_MASS) for t in tg.t_mm]
   thick = sorted(set(tg.t_mm))
-  heavy = [(t, m, v) for t in thick for m in (10.0, 20.0, 40.0) for v in (2.0, 4.3)]
+  heavy = [] if a.no_heavy else [(t, m, v) for t in thick for m in (10.0, 20.0, 40.0) for v in (2.0, 4.3)]
   heavy_sims = {m: FastDrop(a.dt, m) for m in (10.0, 20.0, 40.0)}
 
   def heavy_penalty(x):
@@ -85,7 +90,7 @@ def main():
 
   def loss(x):
     l = score(sim, contacts(x), speeds, tgt, limits, 4)[0]
-    return l + (heavy_penalty(x) if l < 1e2 else 0.0)
+    return l + (heavy_penalty(x) if heavy and l < 1e2 else 0.0)
 
   t0 = time.time()
   res = optimize(loss, BOUNDS, a.maxiter, a.seed)
@@ -93,7 +98,7 @@ def main():
   err = np.log(diag[:, 0] / tgt)
   out = {"material": a.material, "x": res.x.tolist(), "x_names": NAMES, "dt": a.dt, "seed": a.seed,
          "rms": float(np.sqrt(np.mean(err ** 2))), "max": float(np.abs(err).max()),
-         "heavy_penalty": heavy_penalty(res.x), "bare_t_mm": BARE_T if a.material == "bare" else None,
+         "heavy_penalty": heavy_penalty(res.x), "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bare_t_mm": BARE_T if a.material == "bare" else None,
          "constraints_ok": bool(np.all(diag[:, 1] <= limits * 1.001) and np.all(diag[:, 2] <= fit_m2.MAX_RESTITUTION + 1e-3)),
          "rows": [dict(t_mm=r.t_mm, h=r.h, src=r.source, target_kN=r.Fpk_N / 1e3, sim_kN=f / 1e3, pen_mm=p * 1e3, e=e)
                   for (_, r), (f, p, e) in zip(tg.iterrows(), diag)],
