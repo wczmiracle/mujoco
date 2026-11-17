@@ -119,6 +119,7 @@ class MatSim:
         A = max(A - a_is @ np.linalg.lstsq(A_ss + 1e-9 * np.eye(len(rows)), a_is, rcond=None)[0], 0.02 * A)
       dimp = impedance(si, c.dist, c.includemargin)
       inv_mn = dimp * A + (1 - dimp) * Ahat
+      if "static" in fx: inv_mn = Ahat  # fixed per-geom solref: load-time body invweight only, no per-step state
       if not inv_mn > mujoco.mjMINVAL: continue
       mn = max(1 / inv_mn, mn_floor)
       k, bb = K / mn, B / mn
@@ -129,7 +130,8 @@ class MatSim:
       elif self.clamp == "new" and "zclamp" in fx:
         # damping-ratio preserving limit: scale k by s and b by sqrt(s) (zeta ~ b / sqrt(k) unchanged)
         kfac = fx["zclamp"] if fx["zclamp"] is not True else 0.8
-        rd = dimp / si[1]; be0 = rd * bb * h; ke0 = rd * rd * k * h * h
+        rd = 1.0 if "static" in fx else dimp / si[1]  # static: limit for the worst case (full depth), once
+        be0 = rd * bb * h; ke0 = rd * rd * k * h * h
         sc = 1.0
         if be0 > bmax: sc = (bmax / be0) ** 2
         if ke0 > 0:
