@@ -51,6 +51,36 @@ def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1):
   return pd.DataFrame(rows)
 
 
+class BottomDrop(FastDrop):
+  """FastDrop with a second contact pair: the bare shell, active once the pad is compressed beyond t
+  (includemargin = -t; MuJoCo's reference then acts on dist + t). Mirrors the simulator's bottom_out."""
+
+  def __init__(self, dt, mass):
+    import mujoco
+    from drop import IMPACTOR_RADIUS
+    self.model = mujoco.MjModel.from_xml_string(f"""<mujoco><option timestep="{dt:.9g}" tolerance="1e-10" gravity="0 0 -9.81" cone="elliptic" impratio="10"/>
+<worldbody><geom name="floor" type="plane" size="0 0 1" contype="0" conaffinity="0"/>
+<body name="ball" pos="0 0 1"><freejoint/><geom name="ball" type="sphere" size="{IMPACTOR_RADIUS:.9g}" mass="{mass:.9g}" contype="0" conaffinity="0"/></body></worldbody>
+<contact><pair geom1="floor" geom2="ball" condim="3" friction="1 1 0.005 0.0001 0.0001"/>
+<pair geom1="floor" geom2="ball" condim="3" friction="1 1 0.005 0.0001 0.0001"/></contact></mujoco>""")
+    self.data = mujoco.MjData(self.model)
+    self.dt = dt
+    self.f6 = np.zeros(6)
+
+  def set(self, c):
+    pad, shell, t_mm = c
+    FastDrop.set(self, pad)
+    self.model.pair_solref[1, :] = shell.solref
+    self.model.pair_solimp[1, :] = shell.solimp
+    self.model.pair_margin[1] = -t_mm * 1e-3
+
+
+def bare_x():
+  import yaml
+  mats = yaml.safe_load(open("/home/wang22/engineai/engineai_ros2_workspace/src/simulation/mujoco/assets/config/protector_materials.yaml"))["materials"]
+  return np.array([mats["bare"][k] for k in NAMES]), mats["bare"].get("t_mm_nominal", 1.0)
+
+
 def pen_lim(mat, t):
   return BARE_PEN if mat == "bare" else 0.9 * t * 1e-3
 
@@ -66,12 +96,20 @@ def main():
                   help="srm: heights (m) of CHR-extrapolated targets above the measured 1 m; none = measured only")
   ap.add_argument("--meas-weight", type=int, default=1, help="srm: weight of measured rows relative to CHR rows")
   ap.add_argument("--no-heavy", action="store_true", help="drop the 10/20/40 kg constraint rows")
+  ap.add_argument("--bottom-out", action="store_true",
+                  help="pad + bare-shell contact once compressed beyond t (simulator bottom_out); no pen limit")
   a = ap.parse_args()
   tg = targets(a.material, a.chr_heights, a.meas_weight)
-  sim = FastDrop(a.dt, IMPACTOR_MASS)
   speeds, tgt = tg.v.to_numpy(), tg.Fpk_N.to_numpy()
-  limits = np.array([pen_lim(a.material, t) for t in tg.t_mm])
-  contacts = lambda x: [material(x, t, IMPACTOR_MASS) for t in tg.t_mm]
+  if a.bottom_out:
+    sim = BottomDrop(a.dt, IMPACTOR_MASS)
+    xb, tb = bare_x()
+    limits = np.full(len(tg), np.inf)  # bottoming out is allowed: the shell contact takes over
+    contacts = lambda x: [(material(x, t, IMPACTOR_MASS), material(xb, tb, IMPACTOR_MASS), t) for t in tg.t_mm]
+  else:
+    sim = FastDrop(a.dt, IMPACTOR_MASS)
+    limits = np.array([pen_lim(a.material, t) for t in tg.t_mm])
+    contacts = lambda x: [material(x, t, IMPACTOR_MASS) for t in tg.t_mm]
   thick = sorted(set(tg.t_mm))
   heavy = [] if a.no_heavy else [(t, m, v) for t in thick for m in (10.0, 20.0, 40.0) for v in (2.0, 4.3)]
   heavy_sims = {m: FastDrop(a.dt, m) for m in (10.0, 20.0, 40.0)}
@@ -98,7 +136,7 @@ def main():
   err = np.log(diag[:, 0] / tgt)
   out = {"material": a.material, "x": res.x.tolist(), "x_names": NAMES, "dt": a.dt, "seed": a.seed,
          "rms": float(np.sqrt(np.mean(err ** 2))), "max": float(np.abs(err).max()),
-         "heavy_penalty": heavy_penalty(res.x), "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bare_t_mm": BARE_T if a.material == "bare" else None,
+         "heavy_penalty": heavy_penalty(res.x), "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bottom_out": a.bottom_out, "bare_t_mm": BARE_T if a.material == "bare" else None,
          "constraints_ok": bool(np.all(diag[:, 1] <= limits * 1.001) and np.all(diag[:, 2] <= fit_m2.MAX_RESTITUTION + 1e-3)),
          "rows": [dict(t_mm=r.t_mm, h=r.h, src=r.source, target_kN=r.Fpk_N / 1e3, sim_kN=f / 1e3, pen_mm=p * 1e3, e=e)
                   for (_, r), (f, p, e) in zip(tg.iterrows(), diag)],

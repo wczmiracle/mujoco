@@ -25,9 +25,12 @@ def best(pattern):
 def main():
   ap = argparse.ArgumentParser()
   ap.add_argument("--out", type=Path, required=True)
+  ap.add_argument("--srm", default="runs/mat_srm_selected.json", help="SRM fit json (relative to this directory)")
+  ap.add_argument("--bottom-out", action="store_true",
+                  help="write bottom_out: true (pad + bare-shell contact beyond the pad thickness)")
   a = ap.parse_args()
   mats, src = {}, {}
-  for name, pattern in [("srm", "runs/mat_srm_selected.json"), ("silicone", "runs/mat_silicone_s*.json"),
+  for name, pattern in [("srm", a.srm), ("silicone", "runs/mat_silicone_s*.json"),
                         ("bare", "runs/mat_bare_s*.json")]:
     r, f = best(pattern)
     p = dict(zip(r["x_names"], [float(v) for v in r["x"]]))
@@ -45,6 +48,10 @@ def main():
                "solimp = (d0, d0 + (0.9999-d0)*s1, width_over_t * t, midpoint, power)",
       "materials": mats,
   }
+  if a.bottom_out:
+    doc["bottom_out"] = True
+    doc["bottom_out_note"] = ("pad compressed beyond its thickness t: a second contact with includemargin = -t and the "
+                              "bare material (shell reaches the ground); the SRM fit includes it")
   a.out.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True))
   print(a.out)
   print(yaml.safe_dump(src))
