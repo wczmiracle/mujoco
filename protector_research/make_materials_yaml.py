@@ -26,12 +26,14 @@ def main():
   ap = argparse.ArgumentParser()
   ap.add_argument("--out", type=Path, required=True)
   ap.add_argument("--srm", default="runs/mat_srm_selected.json", help="SRM fit json (relative to this directory)")
+  ap.add_argument("--bare", default="runs/mat_bare_s*.json", help="bare fit json or glob (relative to this directory)")
+  ap.add_argument("--dt", type=float, default=0.0005, help="timestep the fits were calibrated at (set contact_material.timestep to it)")
   ap.add_argument("--bottom-out", action="store_true",
                   help="write bottom_out: true (pad + bare-shell contact beyond the pad thickness)")
   a = ap.parse_args()
   mats, src = {}, {}
   for name, pattern in [("srm", a.srm), ("silicone", "runs/mat_silicone_s*.json"),
-                        ("bare", "runs/mat_bare_s*.json")]:
+                        ("bare", a.bare)]:
     r, f = best(pattern)
     p = dict(zip(r["x_names"], [float(v) for v in r["x"]]))
     if name == "bare":
@@ -42,7 +44,7 @@ def main():
       "generated": dt.datetime.now().isoformat(timespec="seconds"),
       "generator": "mujoco/protector_research/make_materials_yaml.py (fork wczmiracle/mujoco, branch protector-research)",
       "sources": src,
-      "dt_calibrated": 0.0005,
+      "dt_calibrated": a.dt,
       "model": "per contact: solref = (-K(t)/m_n, -B(t)/m_n), m_n = 1/(d*A + (1-d)*Ahat); "
                "K(t) = 10^log10_K12 * (t/12mm)^kexp, B(t) = 10^log10_B12 * (t/12mm)^bexp; "
                "solimp = (d0, d0 + (0.9999-d0)*s1, width_over_t * t, midpoint, power)",

@@ -4,7 +4,8 @@ Materials:
   srm       data1 measurements (rho 0.4) + SRM CHR targets above 1 m (Fig. 2c relation)
   silicone  fitted_parameters_silicone.json (F_after = C t^a F_before, gamma = 1) at 0.1-3 m;
             12 mm @ 1 m (~16 kN) is consistent with the measured Fig. 2a comparison
-  bare      unprotected shell: F = m v / 0.26554 ms (CHR's own unprotected definition), 0.1-1 m
+  bare      unprotected shell: F = m v / 0.26554 ms (CHR's own unprotected definition), 0.1-1 m;
+            --bare-meas: the measured unprotected drops (runs/bare_measured_peaks.csv)
 All at the drop-test mass 5.487 kg. Heavy-mass rows (10/20/40 kg) are constraint-only:
 penetration <= 0.9 t (bare: 2 mm) and restitution <= 0.6, so the pad stiffens before bottoming out.
 
@@ -30,7 +31,7 @@ BARE_T = 1.0  # nominal "thickness" (mm) that scales width for the bare shell ma
 BARE_PEN = 0.002
 
 
-def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1):
+def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1, bare_meas=False):
   hs = [0.1, 0.4, 0.8, 1.0]
   if mat == "srm":
     tg = load_targets()
@@ -44,7 +45,11 @@ def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1):
       for h in hs + [1.5, 2.0, 2.5, 3.0]:
         v = float(np.sqrt(2 * 9.81 * h)); fb = IMPACTOR_MASS * v / BARE_PULSE_S / 1e3
         rows.append(dict(t_mm=t, h=h, v=v, Fpk_N=p["C"] * t ** p["alpha"] * fb ** p["gamma"] * 1e3, source="silicone_fit"))
-  if mat == "bare":
+  if mat == "bare" and bare_meas:
+    m = pd.read_csv(Path(__file__).parent / "runs/bare_measured_peaks.csv")
+    for h, f in zip(m.h, m.Fpk_N):
+      rows.append(dict(t_mm=BARE_T, h=h, v=float(np.sqrt(2 * 9.81 * h)), Fpk_N=float(f), source="measured_bare"))
+  elif mat == "bare":
     for h in hs:
       v = float(np.sqrt(2 * 9.81 * h))
       rows.append(dict(t_mm=BARE_T, h=h, v=v, Fpk_N=IMPACTOR_MASS * v / BARE_PULSE_S, source="m*v/dt"))
@@ -98,8 +103,10 @@ def main():
   ap.add_argument("--no-heavy", action="store_true", help="drop the 10/20/40 kg constraint rows")
   ap.add_argument("--bottom-out", action="store_true",
                   help="pad + bare-shell contact once compressed beyond t (simulator bottom_out); no pen limit")
+  ap.add_argument("--bare-meas", action="store_true",
+                  help="bare: fit the measured unprotected drops (runs/bare_measured_peaks.csv, 0.1-1 m) instead of m v / dt")
   a = ap.parse_args()
-  tg = targets(a.material, a.chr_heights, a.meas_weight)
+  tg = targets(a.material, a.chr_heights, a.meas_weight, a.bare_meas)
   speeds, tgt = tg.v.to_numpy(), tg.Fpk_N.to_numpy()
   if a.bottom_out:
     sim = BottomDrop(a.dt, IMPACTOR_MASS)
@@ -136,7 +143,7 @@ def main():
   err = np.log(diag[:, 0] / tgt)
   out = {"material": a.material, "x": res.x.tolist(), "x_names": NAMES, "dt": a.dt, "seed": a.seed,
          "rms": float(np.sqrt(np.mean(err ** 2))), "max": float(np.abs(err).max()),
-         "heavy_penalty": heavy_penalty(res.x), "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bottom_out": a.bottom_out, "bare_t_mm": BARE_T if a.material == "bare" else None,
+         "heavy_penalty": heavy_penalty(res.x), "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bottom_out": a.bottom_out, "bare_meas": a.bare_meas, "bare_t_mm": BARE_T if a.material == "bare" else None,
          "constraints_ok": bool(np.all(diag[:, 1] <= limits * 1.001) and np.all(diag[:, 2] <= fit_m2.MAX_RESTITUTION + 1e-3)),
          "rows": [dict(t_mm=r.t_mm, h=r.h, src=r.source, target_kN=r.Fpk_N / 1e3, sim_kN=f / 1e3, pen_mm=p * 1e3, e=e)
                   for (_, r), (f, p, e) in zip(tg.iterrows(), diag)],
