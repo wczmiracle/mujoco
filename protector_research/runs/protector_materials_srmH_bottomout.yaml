@@ -1,0 +1,46 @@
+generated: '2026-11-18T12:45:49'
+generator: mujoco/protector_research/make_materials_yaml.py (fork wczmiracle/mujoco,
+  branch protector-research)
+sources:
+  srm: mat_srm_H_bottomout.json
+  silicone: mat_silicone_s1.json
+  bare: mat_bare_s0.json
+dt_calibrated: 0.0005
+model: 'per contact: solref = (-K(t)/m_n, -B(t)/m_n), m_n = 1/(d*A + (1-d)*Ahat);
+  K(t) = 10^log10_K12 * (t/12mm)^kexp, B(t) = 10^log10_B12 * (t/12mm)^bexp; solimp
+  = (d0, d0 + (0.9999-d0)*s1, width_over_t * t, midpoint, power)'
+materials:
+  srm:
+    log10_K12: 6.128954866952975
+    kexp: -1.8071701647845193
+    log10_B12: 3.9459765109187908
+    bexp: -0.20050737679316577
+    d0: 0.04774861294141761
+    s1: 0.45478553946592554
+    width_over_t: 1.5
+    midpoint: 0.3877679929607701
+    power: 3.4048138466788775
+  silicone:
+    log10_K12: 7.139843204513912
+    kexp: -1.1954960743917342
+    log10_B12: 4.070995635076734
+    bexp: -0.7662330060097697
+    d0: 0.10297843408115363
+    s1: 0.2883070881740146
+    width_over_t: 0.883904930339289
+    midpoint: 0.9189781940498237
+    power: 5.470485814169682
+  bare:
+    log10_K12: 7.15163520139554
+    kexp: -0.23779436767263606
+    log10_B12: 0.7012657509658178
+    bexp: -2.9945330940337995
+    d0: 0.5024691796482184
+    s1: 0.9629408771351932
+    width_over_t: 1.28639120436135
+    midpoint: 0.12925260204467806
+    power: 7.928280498725245
+    t_mm_nominal: 1.0
+bottom_out: true
+bottom_out_note: 'pad compressed beyond its thickness t: a second contact with includemargin
+  = -t and the bare material (shell reaches the ground); the SRM fit includes it'
