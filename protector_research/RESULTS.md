@@ -896,3 +896,35 @@
 - 风险来源（`tools/contact_risk_share.py`）：旧 P4_S1（400 次）接触风险 74% 来自手，67% 发生在第一次 > 2 kN 着地 0.5 s 之后；新配置（impratio 1）为 88% 和 85%。倒地后手部反复触地主导接触风险在旧数据中已存在；新 bare 力更大（与实测一致），所以占比和数值更高。手每次触地只接触一步、6–11 kN，按实测 bare（5.5 kg、1.4 m/s 20 kN）以 Hertz 关系缩放到 0.8 kg、1–1.5 m/s 约 4–8 kN，量级相符。
 - SRM 仍用 H_s0：0.25 ms 下按 H 设置重拟合的两个种子偏向 CHR（实测最大误差 22%，近 G），原 H_s0 在 0.25 ms 下实测 −15% 到 +8%，静止约束满足。
 - 定稿配置：dt 0.25 ms、elliptic、impratio 1、bottom_out、SRM H_s0、bare 静止约束 s2。`calculate_fall_risk.estimate_log_dt` 改为取到 0.01 ms（a7004f78，原来把 0.25 ms 取成 0.2 ms）。
+
+## 2026-11-19 09:30 — 手部（ELBOW_END）改回模型原生接触参数（橡胶手）
+
+**为什么**：P4_S1 测试（40 次，最终配置）里，倒地 0.5 s 后手部的接触风险（阈值 400 N）全部来自短促拍地。
+`tools/hand_episodes.py`（离地 > 2 ms 算一次新接触；< 30 ms 算短促）：
+
+| P4_S1 test (dt 0.25 ms, ir 1) | 倒地后单手离地再着地次数/run（中位） | 单次峰值 中位 / p90 | 短促接触占手部晚期风险 | 晚期占手部风险 |
+|---|---|---|---|---|
+| 新 bare（rest s2） | 176 | 7.3 / 18.5 kN | 100% | 90% |
+| 旧 bare（s0） | 130 | 1.0 / 3.7 kN | 93% | 65% |
+
+拍地次数主要来自 LaFan 起身动作本身；bare 材料是硬物撞测力板标定的，用在手上把每次拍地放大到 kN 级。
+实际的手是橡胶，所以未被护具覆盖的 ELBOW_END 不再套用 bare，保留模型原生参数
+（手 solref 0.0005/1，地面 0.02/1，solmix 相等取平均 → 0.01025/1；solimp 0.9/0.95/0.001）。
+
+落球对比（dt 0.25 ms，r = 43 mm 级别球，`FastDrop`）：
+
+| 质量 / 速度 | 原生 | 旧 bare | 新 bare |
+|---|---|---|---|
+| 1 kg, 1 m/s | 0.20 kN（压入 3.8 mm, e 0.03） | 5.5 kN | 9.0 kN |
+| 2 kg, 1 m/s | 0.39 kN | 5.5 kN | 9.0 kN |
+| 2 kg, 2 m/s | 0.77 kN（压入 7.5 mm） | 15.5 kN | 22.9 kN |
+| 5 kg, 2 m/s | 1.92 kN | 23.3 kN | 27.1 kN |
+
+原生参数静止约束：1/1.8/5.5/20 kg 压住后接触力 = m g + push 的 0.995–0.999，std 0.4–1.4%，无抖动。
+
+**实现**：materials yaml 新键 `native_bodies: [ELBOW_END]`（make_materials_yaml.py `--native-bodies`），
+sim_manager 对这些 body 的未被护具覆盖 geom 跳过材料（workspace 5b617780）。
+文件 runs/protector_materials_srmH_bottomout_handnative.yaml。
+
+**对重跑的影响**：sample_plan_20261119_024853 中 P3 已用 bare 手跑完（保留）；P2d 手有护具，不受影响；
+P4/P5/P6 起用原生手。主重跑结束后 P3 另起 root 重跑（runs/sample_plan_p3hand_root.txt）。

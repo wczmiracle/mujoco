@@ -28,6 +28,8 @@ def main():
   ap.add_argument("--srm", default="runs/mat_srm_selected.json", help="SRM fit json (relative to this directory)")
   ap.add_argument("--bare", default="runs/mat_bare_s*.json", help="bare fit json or glob (relative to this directory)")
   ap.add_argument("--dt", type=float, default=0.0005, help="timestep the fits were calibrated at (set contact_material.timestep to it)")
+  ap.add_argument("--native-bodies", nargs="*", default=[],
+                  help="body-name substrings whose unprotected geoms keep the model's own solref/solimp (e.g. ELBOW_END)")
   ap.add_argument("--bottom-out", action="store_true",
                   help="write bottom_out: true (pad + bare-shell contact beyond the pad thickness)")
   a = ap.parse_args()
@@ -54,6 +56,10 @@ def main():
     doc["bottom_out"] = True
     doc["bottom_out_note"] = ("pad compressed beyond its thickness t: a second contact with includemargin = -t and the "
                               "bare material (shell reaches the ground); the SRM fit includes it")
+  if a.native_bodies:
+    doc["native_bodies"] = list(a.native_bodies)
+    doc["native_bodies_note"] = ("unprotected geoms of these bodies keep the robot model's own contact parameters "
+                                 "(rubber hand ball; the bare material was measured on a hard shell)")
   a.out.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True))
   print(a.out)
   print(yaml.safe_dump(src))
