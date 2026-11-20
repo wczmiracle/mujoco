@@ -946,3 +946,13 @@ root sample_plan_20261119_024853（/home，~/data 下链接）。P3 原生手重
 - 手：P5/P6 倒地 0.5 s 后手着地次数中位 0，晚期手部风险 0.00；P4 原生手 9 次/run，峰值中位 0.54 kN，晚期手部风险 0.01（硬手测试 176 次、7.3 kN、0.82）。
 - 地面峰值力：P5 S1 中位 236 kN（246/415 run > 200 kN），S2 246 kN（292/403）。P5_S1 每 run 最大力来自右肩 209 run（中位 257 kN）、左肩 121（231 kN）、髋 69（~140 kN），> 100 kN 只 1–2 步。
   P6 肩有 12 mm SRM：所有任务地面峰值 ≤ 39 kN。P4 S1 中位 163 kN（右肩为主）。bare 只在 5.5 kg 标定，躯干级质量峰值为外推。
+
+## 2026-11-20 20:30 — 新 Fig. 2 子图与风险数值；护具对接触风险几乎无效（冲量守恒）
+
+脚本 workspace scripts/material_figs/（提交见 protector-sim2），图 OutputFigures/material_20261120/*_material.png。
+run 加权均值（contact / joint / vibration / motor）：P3 0.297/0.241/0.009/0.035，P2d 0.239/0.134/0.009/0.021，
+P4 0.280/0.251/0.002/0.176，P5 0.092/0.253/0.003/0.001，P6(S1S2S4) 0.044/0.075/0.005/0.000。
+旧发表值 P3 contact 0.186、P2d 0.033（−82%）；新 −20%。
+P2d vs P3 S4_trip_vx-1（50 run）：头峰值中位 27 vs 115 kN，肩 9.5 vs 61 kN；每次头撞击风险 0.107 vs 0.118。
+接触风险 ∫ReLU(F−thr)/thr dt 在 F ≫ thr 时 ≈ 冲量/thr，护具不改冲量 → 指标对护具不敏感；旧 −82% 来自后处理缩力。
+NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2 ms），0.25 ms 日志关节风险 ×8；修后与 per_run 逐次一致（P3_S3 25 run 0.078）。
