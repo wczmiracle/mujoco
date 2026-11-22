@@ -1029,4 +1029,11 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 
 - 决定（用户）：旧数据用 CHR 缩放模拟护具，振动也应保持同一套缩放，不用速度推算的骨盆加速度。图中振动直接用日志值（`_fig2_3_motor_vib_cache/filtered_vibration_load_ratio.csv`，与原图相同）。
 - 重画：`scripts/vib_imu_fix/fig2_body_maps_pelvis_imu.py --vib log`、`fig2_1_load_ratio_pelvis_imu.py --vib log` → `OutputFigures/*_logacc.png`。与用户原图只差 11-22 修复后的关节缓存。振动：fig2-3 P2d 0.43 / P5 1.27 / P6 0.37；fig2-2 P3 1.64 / P4 1.00 / P5 1.27；fig2-1 w/o 1.61 / SRM 0.42。
-- 备选（未采用）：`tools/vib_pelvis_from_log.py` 把日志中缩放后的 cacc（质心点线+角加速度）平移到 imu 点，a_p = lin_c + α×r + ω×v_p。旧 P3_S1 3 次与速度推算 corr 1.0000、峰值差约 1%；P2d_S1 3 次平移后峰值 83–113 m/s²（速度推算 317–1081）。批量计算中途停止，`runs/vib_pelvis_scaled_old_20261122/`（未入库）只有 16 个 job 的部分结果。
+- 备选（未采用）：`tools/vib_pelvis_from_log.py` 把日志中缩放后的 cacc（质心点线+角加速度）平移到 imu 点，a_p = lin_c + α×r + ω×v_p。旧 P3_S1 3 次与速度推算 corr 1.0000、峰值差约 1%；P2d_S1 3 次平移后峰值 83–113 m/s²（速度推算 317–1081）。（后续已跑完，见下节。）
+
+## 2026-11-22 Fig. 2 振动：日志 cacc 平移到 imu 点（保留 CHR 缩放）
+
+- 用户要求 fig2-2 用坐标转换值；为三张图一致（P5 同时出现在 fig2-2 与 fig2-3），三张都用 `tools/vib_pelvis_from_log.py`。旧数据 34 job、5122 次，无错误（4960 pm_data、100 重建 qpos、62 无碰撞计 0）。速度推算列与此前 pelvis_imu CSV 逐次相同（max|diff| 4e-16）。CSV：`_fig2_3_motor_vib_cache/filtered_vibration_load_ratio_pelvis_imu_scaled.csv`（`runs/vib_pelvis_scaled_old_20261122/`）。
+- load ratio 均值（S1/S2/S4）：日志平移 / 速度推算：P2d 0.434 / 1.276，P3 1.577 / 1.569，P4 1.055 / 0.991，P5 1.069 / 1.072，P6 0.396 / 1.077。fig2-1（S1–S4）P3 1.552，P2d 0.429。
+- P4 异常：无护具（protection_scale = 1）但日志平移比速度推算高 3–11%（按 job）。逐步看是撞击步日志 cacc 大于实际速度变化，例 P4_S2 right-150N-7 t=4.860：363 vs 192 m/s²（前后步速度推算 105/138，不是时间错位）。原始信号整体 corr 0.9999。P3/P5 差 < 1%。原因未查明（模型未设积分器，默认 Euler）；日志 cacc 在 P4 撞击步与实际运动不一致。
+- 图：`OutputFigures/fig2-{1,2,3}_..._pelvis_imu_scaled.png`（`scripts/vib_imu_fix/* --vib scaled`）。fig2-3：P2d 0.43 / P5 1.07 / P6 0.40；fig2-2：P3 1.58 / P4 1.06 / P5 1.07；fig2-1：w/o 1.55 / SRM 0.43。
