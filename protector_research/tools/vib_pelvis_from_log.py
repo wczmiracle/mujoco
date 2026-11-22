@@ -8,6 +8,10 @@ keeps the protector scaling and fixes the measurement point. Validated on unprot
 velocity-derived pelvis acceleration (offline_point_acc.point_acc): corr 1.0000, peaks within ~1 %.
 Per run: ratio/risk for 'scaled' (this transform) and 'vel' (velocity-derived, unscaled motion), same collision
 windows / 20 Hz filter as vib_by_imu_body.py.
+Runs recorded with fe4978bc or later (run folder >= 20261006_045130) already log the imu site acceleration
+(mj_objectAcceleration); for them 'scaled' is the logged value itself (log_kind = imu). Found on old P4 re-runs
+(e.g. P4_S2 right-150N-7/20261006_095509: raw log vs velocity-derived imu corr 0.9999, peak 195 vs 192; the
+transform applied twice gave 363).
 Usage: vib_pelvis_from_log.py <tar> <job> <out.csv>"""
 import io, sys, tarfile
 from pathlib import Path
@@ -19,6 +23,7 @@ from vib_by_imu_body import collisions, ratio, COLS
 from calculate_fall_risk import filter_torso_acceleration, calculate_acceleration_risk
 
 ANG = [f'base_link_ang_acc_{a}' for a in 'xyz']
+IMU_LOG_FROM = '20261006_045130'  # fe4978bc: base_link_lin_acc = imu site acceleration
 
 
 def scaled_pelvis(pm, ke, s, t):
@@ -49,7 +54,14 @@ def process(rec, p):
   else:
     pm = o.qpos_from_logs(ke, pd.read_csv(io.BytesIO(p['joint_state_data.csv'])), c); rec['qpos_src'] = 'rebuilt'
   t, A, _ = o.point_acc(pm, ke)
-  ts, a_s = scaled_pelvis(pm, ke, s, t)
+  if rec['log_kind'] == 'imu':
+    ss = s.drop_duplicates('timestamp').dropna(subset=COLS)
+    ts, a_s = ss.timestamp.to_numpy(float), ss[COLS].to_numpy(float)
+  else:
+    ts, a_s = scaled_pelvis(pm, ke, s, t)
+  raw = s.drop_duplicates('timestamp').set_index('timestamp').reindex(t, method='nearest', tolerance=1e-6)[COLS].to_numpy(float)
+  ok = np.isfinite(raw).all(1)
+  rec['corr_rawlog_vel'] = float(np.corrcoef(np.linalg.norm(raw[ok], axis=1), np.linalg.norm(A['pelvis'][ok], axis=1))[0, 1])
   sigs = {'scaled': pd.DataFrame({'timestamp': ts, **{COLS[i]: a_s[:, i] for i in range(3)}}),
           'vel': pd.DataFrame({'timestamp': t, **{COLS[i]: A['pelvis'][:, i] for i in range(3)}})}
   for k, df in sigs.items():
@@ -66,7 +78,8 @@ def main(tarp, job, out):
   def flush():
     if cur is None or not base.issubset(p) or ('pm_data.npy' not in p and 'joint_state_data.csv' not in p):
       return
-    rec = dict(job=job, run=Path(cur).parts[-2])
+    ts_dir = Path(cur).name
+    rec = dict(job=job, run=Path(cur).parts[-2], run_ts=ts_dir, log_kind='imu' if ts_dir >= IMU_LOG_FROM else 'cacc')
     try:
       rows.append(process(rec, p))
     except Exception as e:
