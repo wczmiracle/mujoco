@@ -1024,3 +1024,9 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 - `scripts/material_figs/prescan_body_maps_material.py`（118 次扫描，34 个 job，无错误）+ 副本 → `OutputFigures/material_20261120/fig2-1_prepare_contact_load_ratio_wo_srm_material.png`、`fig2-2_prepare_contact_risk_s1s4_motor_vib_material.png`、`fig2-3_prepare_contact_risk_s1s4_motor_vib_material.png`。振动用日志骨盆 IMU（新数据日志即 imu site），与 `vib_compare_20261122` 逐 job 均值差 0。
 - 振动 load ratio（S1+S2+S4）：P3 1.69 / P4 0.98 / P5 1.17；P2d 1.74 / P6 1.28。fig2-1（S1–S4）：P3 1.65，P2d 1.71。新材料模型下护具不降低骨盆峰值加速度。
 - 关节标记几乎全部到色标上限 4：新数据 0.25 ms 下单步关节力/力矩峰值本身很大。核对 P5_S4_vx+1 一次：由 joint_forces_data 直接算 max(F/ref) 与 1+max(r)/dt 一致（多数关节相同），肩 roll 22–29、腰 12、髋 3–7；旧数据同场景 ≤ 2.2。与接触峰值一样是单步峰值，受 dt 和质量外推影响，与旧图不可直接比。
+
+## 2026-11-22 Fig. 2 振动改回日志值（保留旧护具 CHR 缩放）
+
+- 决定（用户）：旧数据用 CHR 缩放模拟护具，振动也应保持同一套缩放，不用速度推算的骨盆加速度。图中振动直接用日志值（`_fig2_3_motor_vib_cache/filtered_vibration_load_ratio.csv`，与原图相同）。
+- 重画：`scripts/vib_imu_fix/fig2_body_maps_pelvis_imu.py --vib log`、`fig2_1_load_ratio_pelvis_imu.py --vib log` → `OutputFigures/*_logacc.png`。与用户原图只差 11-22 修复后的关节缓存。振动：fig2-3 P2d 0.43 / P5 1.27 / P6 0.37；fig2-2 P3 1.64 / P4 1.00 / P5 1.27；fig2-1 w/o 1.61 / SRM 0.42。
+- 备选（未采用）：`tools/vib_pelvis_from_log.py` 把日志中缩放后的 cacc（质心点线+角加速度）平移到 imu 点，a_p = lin_c + α×r + ω×v_p。旧 P3_S1 3 次与速度推算 corr 1.0000、峰值差约 1%；P2d_S1 3 次平移后峰值 83–113 m/s²（速度推算 317–1081）。批量计算中途停止，`runs/vib_pelvis_scaled_old_20261122/`（未入库）只有 16 个 job 的部分结果。
