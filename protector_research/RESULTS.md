@@ -1062,3 +1062,9 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 - 修正后（S1/S2/S4）日志平移 / 速度推算：P3 1.577 / 1.569，P4 0.992 / 0.991，P5 1.070 / 1.072，P2d 0.434 / 1.276，P6 0.396 / 1.077。无护具三组逐 job 差 < 0.9%。fig2-1（S1–S4）P3 1.552、P2d 0.429。
 - 三张 `_pelvis_imu_scaled` 图已重画：fig2-2 Damping 1.58 / GHM 0.99 / EG 1.07；fig2-3 0.43 / 1.07 / 0.40；fig2-1 1.55 / 0.43。上一节表中“骨盆·日志平移”P4 1.055 作废，应为 0.992。
 - 附带：原版图用的日志值（filtered_vibration_load_ratio.csv）本身也是混合的：P4 有约一半次是 imu 点、其余是质心点。
+
+## 2026-11-22 Fig. 2 _pelvis_imu_scaled 三张图的数据存档
+
+- 图：OutputFigures/fig2-1_prepare_contact_load_ratio_wo_srm_pelvis_imu_scaled.{png,pdf}、fig2-2/2-3_prepare_contact_risk_s1s4_motor_vib_pelvis_imu_scaled.{png,pdf}（脚本 scripts/vib_imu_fix/* --vib scaled，workspace 81697f79）。_logacc、_pelvis_imu 两套已按用户要求删除。
+- 振动（逐次）：runs/vib_pelvis_scaled_old_20261122/（已入库 8b8dc4c6f），合并表同时在 _fig2_3_motor_vib_cache/filtered_vibration_load_ratio_pelvis_imu_scaled.csv。
+- 接触 / 关节 / 电机：~/data/mujoco_logs/ 下 _fig2_1_contact_ratio_cache、_fig2_2_riskmap_cache（11-22 修复后）、_fig2_3_motor_vib_cache。出图时的快照：~/data/mujoco_logs/_fig2_snapshot_pelvis_imu_scaled_20261122.tar.gz（sha256 前缀 5da4d4e24b52ebe4）。原始数据 nmi_dataset 旧压缩包未改。
