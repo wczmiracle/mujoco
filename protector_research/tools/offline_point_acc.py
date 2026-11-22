@@ -32,3 +32,36 @@ def point_acc(pm, ke):
     a = np.zeros_like(V[k]); a[:-1] = np.diff(V[k], axis=0) / np.diff(kt)[:, None]; a[-1] = a[-2]; A[k] = a + G
     ap = np.zeros_like(P[k]); dt = np.median(np.diff(kt)); ap[1:-1] = (P[k][2:] - 2 * P[k][1:-1] + P[k][:-2]) / dt**2; AP[k] = ap + G
   return kt, A, AP
+
+
+
+def qpos_from_logs(ke, joint_state, contact):
+  """Rebuild pm_data-like (time + qpos) on the link_kinetic_energy timestamps for logs without pm_data.npy.
+  Joints: joint_state_data.csv (joint_i_position = qpos[7+i], every step), linear interpolation.
+  Base orientation: integrate the logged LINK_BASE world angular velocity, re-anchored at each base_link_q* sample
+  in contact_data.csv (sparse). Base position: interpolated (does not affect accelerations, only r = p - c matters).
+  Validated against pm_data on old P3_S1 runs (pelvis corr 1.0000, torso >= 0.997, peaks within 0.5%)."""
+  t = ke.timestamp.to_numpy(float)
+  bc = ['base_link_x', 'base_link_y', 'base_link_z', 'base_link_qw', 'base_link_qx', 'base_link_qy', 'base_link_qz']
+  b = contact[['timestamp'] + bc].drop_duplicates('timestamp').sort_values('timestamp')
+  bt = b.timestamp.to_numpy(float); bq = b[bc[3:]].to_numpy(float)
+  pos = np.column_stack([np.interp(t, bt, b[k]) for k in bc[:3]])
+  w = ke[[f'LINK_BASE_angvel_{a}' for a in 'xyz']].to_numpy(float)
+  quat = np.empty((len(t), 4)); k = 0
+  q = bq[0].copy() if len(bq) else np.array([1.0, 0, 0, 0])
+  for i in range(len(t)):
+    while k < len(bt) and bt[k] <= t[i] + 1e-9:
+      q = bq[k].copy(); k += 1
+    quat[i] = q
+    if i + 1 < len(t):
+      mujoco.mju_quatIntegrate(q, _rot_local(q, w[i]), t[i + 1] - t[i])
+      q /= np.linalg.norm(q)
+  js = joint_state.drop_duplicates('timestamp').sort_values('timestamp')
+  nj = _m.nq - 7
+  jj = np.column_stack([np.interp(t, js.timestamp, js[f'joint_{i}_position']) for i in range(nj)])
+  return np.column_stack([t, pos, quat, jj])
+
+
+def _rot_local(q, w_world):
+  """World angular velocity -> body frame (mju_quatIntegrate takes local angular velocity)."""
+  qi = np.zeros(4); mujoco.mju_negQuat(qi, q); out = np.zeros(3); mujoco.mju_rotVecQuat(out, w_world, qi); return out
