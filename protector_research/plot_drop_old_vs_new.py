@@ -4,7 +4,8 @@ measured : no protector  runs/bare_measured_peaks.csv (冲击力截取.zip, 0.1-
            SRM rho 0.4   data1 (drop.load_targets, 6/12/24 mm x 0.1/0.4/0.8/1.0 m; per-trial curves confirmed 2026-11-19)
 old sim  : the pipeline of the old robot data (nmi_dataset): dt 2 ms, MuJoCo default contact solref [0.02, 1] /
            solimp [0.9, 0.95, 0.001, 0.5, 2], protector = CHR scaling of efc_force with the simulator's min-scale limits
-           (drop_m1.py, RESULTS 2026-11-11 21:00, 4 phases). No protector = the unscaled force of the same model.
+           (drop_m1.drop_m1, computed here at every measured height, 4 phases). No protector = the same contact model
+           without scaling (scale_on=False; the old simulator with protection off).
 new sim  : the current simulator (contact_material, protector_materials.yaml as installed): dt 0.25 ms, bare = the
            measured-fit bare material, SRM = H_s0 pad + bare shell once compressed beyond t (bottom_out), 4 phases.
 Writes runs/figs/drop_old_vs_new_vs_measured.png and runs/drop_old_vs_new.csv.
@@ -22,6 +23,7 @@ from drop import IMPACTOR_MASS, load_targets
 from fit_m2 import FastDrop
 from fit_m2_direct import NAMES, material
 from fit_material import BottomDrop, BARE_T
+from drop_m1 import drop_m1
 
 font_manager.fontManager.addfont("/usr/share/fonts/truetype/arphic/uming.ttc")
 plt.rcParams["font.family"] = font_manager.FontProperties(fname="/usr/share/fonts/truetype/arphic/uming.ttc").get_name()
@@ -29,10 +31,13 @@ plt.rcParams.update({"axes.unicode_minus": False, "font.size": 9, "axes.spines.t
 
 MATS = "/home/wang22/engineai/engineai_ros2_workspace/src/simulation/mujoco/assets/config/protector_materials.yaml"
 DT_NEW = 0.00025
-H4 = (0.1, 0.4, 0.8, 1.0)
-# old pipeline (drop_m1.py, RESULTS 2026-11-11 21:00): kN at 0.1/0.4/0.8/1.0 m
-OLD_BARE = dict(zip(H4, (0.8, 1.6, 5.6, 6.2)))
-OLD_SRM = {6: (0.67, 0.57, 0.28, 0.32), 12: (0.66, 0.58, 0.28, 0.31), 24: (0.64, 0.59, 0.28, 0.31)}
+
+
+def old(t_mm, h, protected):
+  """Old pipeline peak (kN): applied force with CHR scaling, or the unscaled force without protector."""
+  r = [drop_m1(t_mm, v(h), phase=k / 4, scale_on=protected) for k in range(4)]
+  return float(np.mean([x[0] for x in r]))
+
 COL = {6: "#2a78d6", 12: "#eb6834", 24: "#6250d6"}
 
 mats = yaml.safe_load(open(MATS))["materials"]
@@ -45,7 +50,7 @@ fd = FastDrop(DT_NEW, IMPACTOR_MASS)
 fd.set(material(x["bare"], tb, IMPACTOR_MASS))
 rows = []
 for _, r in bare.iterrows():
-  rows.append(dict(case="无护具", t_mm=0, h=r.h, measured_kN=r.Fpk_N / 1e3, old_kN=OLD_BARE.get(round(r.h, 2), np.nan),
+  rows.append(dict(case="无护具", t_mm=0, h=r.h, measured_kN=r.Fpk_N / 1e3, old_kN=old(0, r.h, False),
                    new_kN=fd.run_avg(v(r.h), 4)[0] / 1e3))
 bd = BottomDrop(DT_NEW, IMPACTOR_MASS)
 tg = load_targets()
@@ -54,7 +59,7 @@ for t in (6, 12, 24):
   m = tg[(tg.density == 0.4) & (tg.t_mm == t)].sort_values("h")
   for _, r in m.iterrows():
     rows.append(dict(case=f"SRM {t} mm", t_mm=t, h=r.h, measured_kN=r.Fpk_N / 1e3,
-                     old_kN=OLD_SRM[t][H4.index(round(r.h, 2))], new_kN=bd.run_avg(v(r.h), 4)[0] / 1e3))
+                     old_kN=old(t, r.h, True), new_kN=bd.run_avg(v(r.h), 4)[0] / 1e3))
 df = pd.DataFrame(rows)
 df["old_err"] = df.old_kN / df.measured_kN - 1
 df["new_err"] = df.new_kN / df.measured_kN - 1
@@ -74,6 +79,10 @@ for t in (6, 12, 24):
   ax.plot(s.h, s.measured_kN, "o-", color=COL[t], label=f"{t} mm 实测")
   ax.plot(s.h, s.new_kN, "s--", color=COL[t], mfc="none", mew=1.5, label=f"{t} mm 新仿真")
   ax.plot(s.h, s.old_kN, "^:", color=COL[t], mfc="none", mew=1.2, alpha=0.8, label=f"{t} mm 旧仿真（CHR 缩放）")
+o6 = df[df.t_mm == 6].old_kN.to_numpy()
+if all(np.allclose(df[df.t_mm == t].old_kN.to_numpy(), o6) for t in (12, 24)):
+  ax.annotate("旧仿真：6/12/24 mm 三条完全重合\n（CHR 缩放被 min-scale 下限卡住）", (0.8, o6[2]), xytext=(0.47, 0.8),
+              textcoords="data", fontsize=7.5, color="#555555", arrowprops=dict(arrowstyle="-", color="#999999", lw=0.8))
 ax.set_title("SRM（ρ0.4）护具：5.5 kg 落锤")
 for ax in axes:
   ax.set_yscale("log"); ax.set_xlabel("落高 (m)"); ax.set_ylabel("峰值力 (kN)"); ax.grid(color="#e6e5e1", lw=0.6, which="both")
