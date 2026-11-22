@@ -1009,3 +1009,4 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 
 - 躯干：P5（EG）2.07 远高于 P4（GHM）1.37，也高于 P3 1.68；risk P5 0.0152 > P3 0.0101 > P4 0.0054。EG 肩先着地，冲击直接作用在上身。
 - P2d/P6（旧护具）：日志加速度是 CHR 缩放后的值，但运动本身（由速度算）没有相应减小。P2d_S1 前 3 次：日志原始峰值 82–123 m/s²，速度推算 317–1081 m/s²；接触力 unprotected 10.6–15.2 kN，缩放到 1.5–2.5 kN（scale 0.04–0.12）。旧数据中护具对振动的降低（0.43 vs P3 1.64）不是实际运动的结果，P2d/P6 的旧振动值不可用。
+- 重画（旧数据，振动 = 骨盆 IMU 正确测量点，其余通道不变）：`scripts/vib_imu_fix/fig2_body_maps_pelvis_imu.py` → `OutputFigures/fig2-2_prepare_contact_risk_s1s4_motor_vib_pelvis_imu.png`（Damping 1.57 / GHM 0.99 / EG 1.07）与 `fig2-3_..._pelvis_imu.png`（P2d 1.28 / P5 1.07 / P6 1.08）。振动数据 `_fig2_3_motor_vib_cache/filtered_vibration_load_ratio_pelvis_imu.csv`；原图与原 CSV 未改。
