@@ -1068,3 +1068,10 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 - 图：OutputFigures/fig2-1_prepare_contact_load_ratio_wo_srm_pelvis_imu_scaled.{png,pdf}、fig2-2/2-3_prepare_contact_risk_s1s4_motor_vib_pelvis_imu_scaled.{png,pdf}（脚本 scripts/vib_imu_fix/* --vib scaled，workspace 81697f79）。_logacc、_pelvis_imu 两套已按用户要求删除。
 - 振动（逐次）：runs/vib_pelvis_scaled_old_20261122/（已入库 8b8dc4c6f），合并表同时在 _fig2_3_motor_vib_cache/filtered_vibration_load_ratio_pelvis_imu_scaled.csv。
 - 接触 / 关节 / 电机：~/data/mujoco_logs/ 下 _fig2_1_contact_ratio_cache、_fig2_2_riskmap_cache（11-22 修复后）、_fig2_3_motor_vib_cache。出图时的快照：~/data/mujoco_logs/_fig2_snapshot_pelvis_imu_scaled_20261122.tar.gz（sha256 前缀 5da4d4e24b52ebe4）。原始数据 nmi_dataset 旧压缩包未改。
+
+## 2026-11-22 新旧仿真对落锤实测：峰值力
+
+- `plot_drop_old_vs_new.py` → `runs/figs/drop_old_vs_new_vs_measured.png`、`runs/drop_old_vs_new.csv`。5.487 kg 球头落锤，4 个时间相位平均。旧 = 旧机器人数据的流程（dt 2 ms、MuJoCo 默认接触，护具为 CHR 缩放 efc_force，drop_m1.py 11-11 结果）；新 = 现装 protector_materials.yaml（dt 0.25 ms，bare 实测拟合 + 静止约束，SRM H_s0 + 压穿外壳接触）。
+- 无护具（0.1–1 m，10 个落高）：实测 20.4–85.0 kN；新仿真 −19% 到 +26%（rms 14%；0.1 m −19%、1 m +26%）；旧仿真 0.8–6.2 kN，−97% 到 −93%。
+- SRM ρ0.4（6/12/24 mm × 0.1/0.4/0.8/1.0 m）：新仿真 −14% 到 +24%（rms 10%；最差 24 mm 0.1 m +24%）；旧仿真 0.28–0.67 kN，−99% 到 −26%，且几乎不随落高和厚度变化。
+- 范围：只验证了单个 5.5 kg 刚球竖直砸砧板、落高 ≤ 1 m。未验证：其他质量（机器人部件有效质量约 1–40 kg，新模型按有效质量归一化，未做落锤实测）、斜向/滑动冲击、手部（用模型原生接触）、整机摔倒（无实测）。
