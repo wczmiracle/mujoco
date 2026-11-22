@@ -1018,3 +1018,9 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 - 2026-11-20 19:39–19:45，`material_figs/fig2-1_prepare_contact_force_grid_material.py` 通过 `_riskmap_module()` 加载了原版 fig2-2 关节图模块（缓存 `_fig2_2_riskmap_cache`、`_DT` 0.002），把 merged（material）压缩包扫进共享缓存：P2d_* 与 P3_* 共 16 个 v5 文件。核对：旧缓存 P3 v5 的接触点与 material 缓存逐点相同，关节峰值不同（dt 错 8 倍）。P4/P5/P6 v5（10-06、11-11）未受影响。
 - 影响：之后所有从 v5 读关节峰值的图（fig2-1 load ratio、fig2-2/2-3 motor_vib 与 joint 图，含 2026-11-22 的 _pelvis_imu 三张）中 P3、P2d 的关节标记来自 material 数据且偏大。接触点已在 11-21 改为从压缩包重扫（`_fig2_1_contact_ratio_cache`，未受影响）。
 - 处理：16 个文件移到 `_fig2_2_riskmap_cache/_backup_overwritten_with_material_data_20261120/`（附 README），用原版 scan_tar 从 nmi_dataset 旧压缩包重建；P3_S1 接触点 12611、P2d_S1 4222，与 `_fig2_1_contact_ratio_cache` 一致。三张 _pelvis_imu 图已重画。`make_material_copies.py` 改为副本之间互相加载、只用 *_material_20261120 缓存，并对引用原版脚本/缓存报错（workspace 008722a6）。
+
+## 2026-11-22 新数据（material）四色卡图
+
+- `scripts/material_figs/prescan_body_maps_material.py`（118 次扫描，34 个 job，无错误）+ 副本 → `OutputFigures/material_20261120/fig2-1_prepare_contact_load_ratio_wo_srm_material.png`、`fig2-2_prepare_contact_risk_s1s4_motor_vib_material.png`、`fig2-3_prepare_contact_risk_s1s4_motor_vib_material.png`。振动用日志骨盆 IMU（新数据日志即 imu site），与 `vib_compare_20261122` 逐 job 均值差 0。
+- 振动 load ratio（S1+S2+S4）：P3 1.69 / P4 0.98 / P5 1.17；P2d 1.74 / P6 1.28。fig2-1（S1–S4）：P3 1.65，P2d 1.71。新材料模型下护具不降低骨盆峰值加速度。
+- 关节标记几乎全部到色标上限 4：新数据 0.25 ms 下单步关节力/力矩峰值本身很大。核对 P5_S4_vx+1 一次：由 joint_forces_data 直接算 max(F/ref) 与 1+max(r)/dt 一致（多数关节相同），肩 roll 22–29、腰 12、髋 3–7；旧数据同场景 ≤ 2.2。与接触峰值一样是单步峰值，受 dt 和质量外推影响，与旧图不可直接比。
