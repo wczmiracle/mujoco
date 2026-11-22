@@ -52,6 +52,11 @@ def main():
   ap.add_argument("--slow-len", type=float, default=1.0)
   ap.add_argument("--azim", type=float, default=135.0)
   ap.add_argument("--dist", type=float, default=1.9)
+  ap.add_argument("--elev", type=float, default=-35.0)
+  ap.add_argument("--focus", choices=["L", "R"], default=None, help="close-up following this hand ball")
+  ap.add_argument("--alpha", type=float, default=1.0, help="robot body opacity (hand balls stay opaque)")
+  ap.add_argument("--slow-start", type=float, default=None, help="slow-motion window start (default: most hand force)")
+  ap.add_argument("--no-realtime", action="store_true")
   a = ap.parse_args()
 
   pm = np.load(glob.glob(os.path.join(a.run, "pm_data.npy"))[0])
@@ -77,10 +82,16 @@ def main():
     g = [i for i in range(m.ngeom) if m.geom_bodyid[i] == b][0]
     m.geom_group[g] = 0
     hand_geoms[side] = g
+  if a.alpha < 1.0:
+    for i in range(m.ngeom):
+      if m.geom_bodyid[i] != 0 and i not in hand_geoms.values():
+        rgba = m.mat_rgba[m.geom_matid[i]].copy() if m.geom_matid[i] >= 0 else m.geom_rgba[i].copy()
+        m.geom_matid[i] = -1
+        m.geom_rgba[i] = [rgba[0], rgba[1], rgba[2], rgba[3] * a.alpha]
   r = mujoco.Renderer(m, H, W)
   cam = mujoco.MjvCamera()
   cam.type = mujoco.mjtCamera.mjCAMERA_FREE
-  cam.distance, cam.azimuth, cam.elevation = a.dist, a.azim, -35.0
+  cam.distance, cam.azimuth, cam.elevation = a.dist, a.azim, a.elev
   font = ImageFont.truetype(FONT, 22)
   small = ImageFont.truetype(FONT, 18)
   ff = subprocess.Popen(["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
@@ -93,9 +104,9 @@ def main():
     i = min(np.searchsorted(t, tc), len(t) - 1)
     d.qpos[:] = qpos[i]
     mujoco.mj_kinematics(m, d)
-    base = d.xpos[1].copy()
+    base = d.geom_xpos[hand_geoms[a.focus]].copy() if a.focus else d.xpos[1].copy()
     look = base if look is None else 0.85 * look + 0.15 * base
-    cam.lookat[:] = [look[0], look[1], min(look[2], 0.6)]
+    cam.lookat[:] = [look[0], look[1], 0.06 if a.focus else min(look[2], 0.6)]
     f = {s: window_max(hf[s], tc - dtf, tc) for s in "LR"}
     for s in "LR":
       x = min(f[s] / 5000.0, 1.0)
@@ -128,7 +139,9 @@ def main():
           dr.line([xx, yb, xx, yy], fill=col, width=2)
     ff.stdin.write(np.asarray(img).tobytes())
 
-  for tc in np.arange(t0 + 1 / FPS, t[-1], 1 / FPS):
+  if a.slow_start is not None:
+    ts = a.slow_start
+  for tc in ([] if a.no_realtime else np.arange(t0 + 1 / FPS, t[-1], 1 / FPS)):
     frame(tc, 1 / FPS, "实时")
   look = None
   dtf = a.slow / FPS
