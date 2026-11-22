@@ -1012,3 +1012,9 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 - 重画（旧数据，振动 = 骨盆 IMU 正确测量点，其余通道不变）：`scripts/vib_imu_fix/fig2_body_maps_pelvis_imu.py` → `OutputFigures/fig2-2_prepare_contact_risk_s1s4_motor_vib_pelvis_imu.png`（Damping 1.57 / GHM 0.99 / EG 1.07）与 `fig2-3_..._pelvis_imu.png`（P2d 1.28 / P5 1.07 / P6 1.08）。振动数据 `_fig2_3_motor_vib_cache/filtered_vibration_load_ratio_pelvis_imu.csv`；原图与原 CSV 未改。
 - fig2-1（P3 vs P2d，S1–S4，含 S3）：S3 的旧日志（2026-08）没有 pm_data.npy，`offline_point_acc.qpos_from_logs` 用 joint_state（每步）+ 骨盆角速度积分姿态（在 contact_data 的稀疏位姿处校正）重建 qpos；对有 pm_data 的 9 次（P3/P2d/P4）验证骨盆、躯干 corr 0.9999–1.0000，峰值差 < 0.5%。S3 共 102 次，100 次用重建 qpos，2 次无碰撞（计 0，与原缓存一致）；日志值与已发表缓存逐 job 一致。
   `scripts/vib_imu_fix/fig2_1_load_ratio_pelvis_imu.py` → `OutputFigures/fig2-1_prepare_contact_load_ratio_wo_srm_pelvis_imu.png`：振动 w/o 1.54（原 1.61），w/ SRM 1.27（原 0.42）。振动 CSV（5122 次）另存 `runs/vib_imu_body_old_20261122/filtered_vibration_load_ratio_pelvis_imu.csv`。
+
+## 2026-11-22 修复：共享 riskmap 缓存被 material 数据覆盖
+
+- 2026-11-20 19:39–19:45，`material_figs/fig2-1_prepare_contact_force_grid_material.py` 通过 `_riskmap_module()` 加载了原版 fig2-2 关节图模块（缓存 `_fig2_2_riskmap_cache`、`_DT` 0.002），把 merged（material）压缩包扫进共享缓存：P2d_* 与 P3_* 共 16 个 v5 文件。核对：旧缓存 P3 v5 的接触点与 material 缓存逐点相同，关节峰值不同（dt 错 8 倍）。P4/P5/P6 v5（10-06、11-11）未受影响。
+- 影响：之后所有从 v5 读关节峰值的图（fig2-1 load ratio、fig2-2/2-3 motor_vib 与 joint 图，含 2026-11-22 的 _pelvis_imu 三张）中 P3、P2d 的关节标记来自 material 数据且偏大。接触点已在 11-21 改为从压缩包重扫（`_fig2_1_contact_ratio_cache`，未受影响）。
+- 处理：16 个文件移到 `_fig2_2_riskmap_cache/_backup_overwritten_with_material_data_20261120/`（附 README），用原版 scan_tar 从 nmi_dataset 旧压缩包重建；P3_S1 接触点 12611、P2d_S1 4222，与 `_fig2_1_contact_ratio_cache` 一致。三张 _pelvis_imu 图已重画。`make_material_copies.py` 改为副本之间互相加载、只用 *_material_20261120 缓存，并对引用原版脚本/缓存报错（workspace 3d… 见 git log）。
