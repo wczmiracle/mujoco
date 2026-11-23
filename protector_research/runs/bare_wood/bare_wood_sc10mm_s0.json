@@ -1,0 +1,473 @@
+{
+ "material": "bare",
+ "x": [
+  4.158271467169781,
+  -2.084850346767123,
+  0.6210532016827983,
+  -2.9661082351890027,
+  0.07801835777407162,
+  0.23664333185565922,
+  1.4944818824537758,
+  0.979419066640735,
+  2.052022536312495
+ ],
+ "x_names": [
+  "log10_K12",
+  "kexp",
+  "log10_B12",
+  "bexp",
+  "d0",
+  "s1",
+  "width_over_t",
+  "midpoint",
+  "power"
+ ],
+ "dt": 0.00025,
+ "seed": 0,
+ "rms": 0.22321477553884486,
+ "max": 0.3894597940744791,
+ "heavy_penalty": 0.0,
+ "rest": true,
+ "max_e": 0.6,
+ "rest_check": {
+  "1.0": [
+   [
+    1.0,
+    1.0000005407100148,
+    1.7621140614688483e-06
+   ],
+   [
+    1.8,
+    0.9999999999920346,
+    4.412359664714102e-11
+   ],
+   [
+    5.5,
+    0.9999999631473223,
+    3.5837724656678926e-07
+   ],
+   [
+    20.0,
+    1.0049263706498226,
+    0.05616757099576364
+   ]
+  ]
+ },
+ "chr_heights": [
+  1.5,
+  2.0,
+  2.5,
+  3.0
+ ],
+ "meas_weight": 1,
+ "no_heavy": false,
+ "bottom_out": false,
+ "bare_meas": false,
+ "bare_ref": "runs/bare_reference_wood_sc10_multimass.csv",
+ "k_ref": 7734094.977197524,
+ "bare_t_mm": 1.0,
+ "constraints_ok": true,
+ "rows": [
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.1,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 2.5560972347553146,
+   "sim_kN": 2.562543007876026,
+   "pen_mm": 0.5454623939202125,
+   "e": 0.04007359380657923
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.2,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 3.614867376135331,
+   "sim_kN": 3.7365528966457324,
+   "pen_mm": 0.6886288257200168,
+   "e": 0.046710037324237834
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.3,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 4.427290279682516,
+   "sim_kN": 4.718895325795271,
+   "pen_mm": 0.7784839777883121,
+   "e": 0.04820709447996186
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.4,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 5.112194469510629,
+   "sim_kN": 5.616232036860555,
+   "pen_mm": 0.8386202931612228,
+   "e": 0.04872140148863451
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.5,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 5.7156071740121215,
+   "sim_kN": 6.468285977899818,
+   "pen_mm": 0.8786789069580997,
+   "e": 0.049036664735949954
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.6,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 6.261133958089588,
+   "sim_kN": 7.294653083801965,
+   "pen_mm": 0.9214263264882561,
+   "e": 0.048768495189670184
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.7,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 6.7627976100624485,
+   "sim_kN": 8.106524656859921,
+   "pen_mm": 0.9576123004120807,
+   "e": 0.04956544184493598
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.8,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 7.229734752270662,
+   "sim_kN": 8.910904886978129,
+   "pen_mm": 0.9832756966922027,
+   "e": 0.04896398829149449
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 0.9,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 7.668291704265942,
+   "sim_kN": 9.712462303614306,
+   "pen_mm": 0.9997861652010498,
+   "e": 0.04948576997205309
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 1.0,
+   "h": 1.0,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 8.083089182684901,
+   "sim_kN": 10.51445500151659,
+   "pen_mm": 1.0081629900395295,
+   "e": 0.05033767987727575
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.1,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 5.98749068261696,
+   "sim_kN": 5.488262687979213,
+   "pen_mm": 1.4259920055305353,
+   "e": 0.2201939946712446
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.2,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 8.467590527939445,
+   "sim_kN": 10.221078666467712,
+   "pen_mm": 1.6835935341820083,
+   "e": 0.2232429544049893
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.3,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 10.370638072137831,
+   "sim_kN": 13.618658293454375,
+   "pen_mm": 1.8977273544021067,
+   "e": 0.21502295971329974
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.4,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 11.97498136523392,
+   "sim_kN": 16.310956363525886,
+   "pen_mm": 2.0972455249053876,
+   "e": 0.2078006453716156
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.5,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 13.38843618097814,
+   "sim_kN": 18.380047872339496,
+   "pen_mm": 2.2617606328674684,
+   "e": 0.20058041716037547
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.6,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 14.666297012080094,
+   "sim_kN": 20.976689179510533,
+   "pen_mm": 2.386837238130629,
+   "e": 0.19330812763606647
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.7,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 15.841411323520841,
+   "sim_kN": 22.862647200372187,
+   "pen_mm": 2.5092920527035947,
+   "e": 0.18834039306214528
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.8,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 16.93518105587889,
+   "sim_kN": 24.69607614739687,
+   "pen_mm": 2.6542273619802326,
+   "e": 0.1863266055501559
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 0.9,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 17.962472047850873,
+   "sim_kN": 26.515898310277972,
+   "pen_mm": 2.7958461020596848,
+   "e": 0.18512532789494307
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 5.487,
+   "h": 1.0,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 18.93410802610593,
+   "sim_kN": 27.731409765664875,
+   "pen_mm": 2.926612693946444,
+   "e": 0.18390736003194869
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.1,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 11.431214348024245,
+   "sim_kN": 11.532473295742221,
+   "pen_mm": 2.6794274089685794,
+   "e": 0.3820654236619942
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.2,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 16.166178365369802,
+   "sim_kN": 15.654903489143384,
+   "pen_mm": 3.552116727180435,
+   "e": 0.36029663912691756
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.3,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 19.799444042988327,
+   "sim_kN": 18.751087533680654,
+   "pen_mm": 4.220559389277373,
+   "e": 0.35055982336829905
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.4,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 22.86242869604849,
+   "sim_kN": 21.418208389415863,
+   "pen_mm": 4.803951458575741,
+   "e": 0.3462139875544173
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.5,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 25.560972347553143,
+   "sim_kN": 23.71944676211318,
+   "pen_mm": 5.293261584461709,
+   "e": 0.3416335820823098
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.6,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 28.00064229304128,
+   "sim_kN": 25.764240565333132,
+   "pen_mm": 5.736246896926339,
+   "e": 0.33837248445053614
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.7,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 30.244150348345503,
+   "sim_kN": 27.716627425300256,
+   "pen_mm": 6.153368825146728,
+   "e": 0.3362301835364203
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.8,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 32.332356730739605,
+   "sim_kN": 29.462331536610495,
+   "pen_mm": 6.562901778445172,
+   "e": 0.3356720077387392
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 0.9,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 34.29364304407273,
+   "sim_kN": 31.17921071753317,
+   "pen_mm": 6.9451113566164695,
+   "e": 0.33509111201667235
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 20.0,
+   "h": 1.0,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 36.14867376135331,
+   "sim_kN": 32.75441874632481,
+   "pen_mm": 7.30429545610791,
+   "e": 0.3344924717313036
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.1,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 16.166178365369802,
+   "sim_kN": 13.353583931524675,
+   "pen_mm": 4.033426695363724,
+   "e": 0.46213770756983236
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.2,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 22.86242869604849,
+   "sim_kN": 18.149419305577258,
+   "pen_mm": 5.487621362865132,
+   "e": 0.4479662732582409
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.3,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 28.00064229304128,
+   "sim_kN": 21.852494501733478,
+   "pen_mm": 6.608896584372477,
+   "e": 0.44322975564391603
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.4,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 32.332356730739605,
+   "sim_kN": 24.98862919525209,
+   "pen_mm": 7.5656683540763146,
+   "e": 0.4404659037006212
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.5,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 36.14867376135331,
+   "sim_kN": 27.749275421342688,
+   "pen_mm": 8.38768423242918,
+   "e": 0.4374722358610193
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.6,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 39.598888085976654,
+   "sim_kN": 30.242763906748415,
+   "pen_mm": 9.134190823436118,
+   "e": 0.4354489365783742
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.7,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 42.77168760508117,
+   "sim_kN": 32.5529584307768,
+   "pen_mm": 9.831448627872447,
+   "e": 0.43431470176573855
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.8,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 45.72485739209697,
+   "sim_kN": 34.68429176628551,
+   "pen_mm": 10.49452506513849,
+   "e": 0.43400995065961756
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 0.9,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 48.4985350961094,
+   "sim_kN": 36.708078189203576,
+   "pen_mm": 11.115330016696241,
+   "e": 0.43367978753683784
+  },
+  {
+   "t_mm": 1.0,
+   "mass": 40.0,
+   "h": 1.0,
+   "src": "ref:bare_reference_wood_sc10_multimass.csv",
+   "target_kN": 51.12194469510629,
+   "sim_kN": 38.614401566367654,
+   "pen_mm": 11.70062387972287,
+   "e": 0.4333301786549176
+  }
+ ],
+ "fit_seconds": 732.7582833766937
+}

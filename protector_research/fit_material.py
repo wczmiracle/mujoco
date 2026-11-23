@@ -6,6 +6,8 @@ Materials:
             12 mm @ 1 m (~16 kN) is consistent with the measured Fig. 2a comparison
   bare      unprotected shell: F = m v / 0.26554 ms (CHR's own unprotected definition), 0.1-1 m;
             --bare-meas: the measured unprotected drops (runs/bare_measured_peaks.csv)
+            --bare-ref CSV: reference drops (h, Fpk_N[, pen_mm]) at 5.487 kg, e.g. tools/bare_reference.py (wood floor)
+            or Abaqus; penetration limit 1.5 x the reference indentation
 All at the drop-test mass 5.487 kg. Heavy-mass rows (10/20/40 kg) are constraint-only:
 penetration <= 0.9 t (bare: 2 mm) and restitution <= 0.6, so the pad stiffens before bottoming out.
 
@@ -31,7 +33,7 @@ BARE_T = 1.0  # nominal "thickness" (mm) that scales width for the bare shell ma
 BARE_PEN = 0.002
 
 
-def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1, bare_meas=False):
+def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1, bare_meas=False, bare_ref=None):
   hs = [0.1, 0.4, 0.8, 1.0]
   if mat == "srm":
     tg = load_targets()
@@ -45,7 +47,13 @@ def targets(mat, chr_heights=(1.5, 2.0, 2.5, 3.0), meas_weight=1, bare_meas=Fals
       for h in hs + [1.5, 2.0, 2.5, 3.0]:
         v = float(np.sqrt(2 * 9.81 * h)); fb = IMPACTOR_MASS * v / BARE_PULSE_S / 1e3
         rows.append(dict(t_mm=t, h=h, v=v, Fpk_N=p["C"] * t ** p["alpha"] * fb ** p["gamma"] * 1e3, source="silicone_fit"))
-  if mat == "bare" and bare_meas:
+  if mat == "bare" and bare_ref is not None:
+    m = pd.read_csv(bare_ref)
+    for _, r in m.iterrows():
+      rows.append(dict(t_mm=BARE_T, mass=float(r["mass"]) if "mass" in m.columns else IMPACTOR_MASS,
+                       h=float(r.h), v=float(np.sqrt(2 * 9.81 * r.h)), Fpk_N=float(r.Fpk_N),
+                       pen_ref_mm=float(r.pen_mm) if "pen_mm" in m.columns else np.nan, source=f"ref:{Path(bare_ref).name}"))
+  elif mat == "bare" and bare_meas:
     m = pd.read_csv(Path(__file__).parent / "runs/bare_measured_peaks.csv")
     for h, f in zip(m.h, m.Fpk_N):
       # meas_weight > 1: repeat the robot-range rows (h <= 0.5 m, v <= 3.1 m/s) that many times
@@ -152,14 +160,28 @@ def main():
   ap.add_argument("--max-e", type=float, default=None, help="override the restitution cap (fit_m2.MAX_RESTITUTION, 0.6)")
   ap.add_argument("--rest", action="store_true",
                   help="add the resting-contact constraint (pressed body must settle, no chatter); see rest_check")
+  ap.add_argument("--bare-ref", default=None, help="bare: reference drop csv (h, Fpk_N[, pen_mm]) at 5.487 kg")
   ap.add_argument("--bare-meas", action="store_true",
                   help="bare: fit the measured unprotected drops (runs/bare_measured_peaks.csv, 0.1-1 m) instead of m v / dt")
   a = ap.parse_args()
   if a.max_e is not None:
     fit_m2.MAX_RESTITUTION = a.max_e
-  tg = targets(a.material, a.chr_heights, a.meas_weight, a.bare_meas)
+  tg = targets(a.material, a.chr_heights, a.meas_weight, a.bare_meas, a.bare_ref)
+  # reference bare: allow 1.5 x its indentation; equivalent linear stiffness k_ref = (F / v)^2 / m for the heavy rows
+  k_ref = float(np.median((tg.Fpk_N / tg.v) ** 2 / IMPACTOR_MASS)) if a.bare_ref else None
   speeds, tgt = tg.v.to_numpy(), tg.Fpk_N.to_numpy()
-  if a.bottom_out:
+  multimass = "mass" in tg.columns and tg["mass"].nunique() > 1
+  if multimass:  # one FastDrop per impactor mass; contacts carry their mass
+    class MultiSim:
+      sims = {M: FastDrop(a.dt, M) for M in sorted(set(tg["mass"]))}
+      def set(self, mc):
+        self.cur = self.sims[mc[0]]; self.cur.set(mc[1])
+      def run_avg(self, v, n):
+        return self.cur.run_avg(v, n)
+    sim = MultiSim()
+    limits = 1.5 * tg.pen_ref_mm.to_numpy() * 1e-3
+    contacts = lambda x: [(M, material(x, t, M)) for t, M in zip(tg.t_mm, tg["mass"])]
+  elif a.bottom_out:
     sim = BottomDrop(a.dt, IMPACTOR_MASS)
     xb, tb = bare_x()
     limits = np.full(len(tg), np.inf)  # bottoming out is allowed: the shell contact takes over
@@ -167,9 +189,12 @@ def main():
   else:
     sim = FastDrop(a.dt, IMPACTOR_MASS)
     limits = np.array([pen_lim(a.material, t) for t in tg.t_mm])
+    if a.bare_ref:
+      limits = np.where(np.isfinite(tg.get("pen_ref_mm", np.nan)), 1.5 * tg.get("pen_ref_mm", np.nan) * 1e-3,
+                        1.5 * tg.v.to_numpy() * np.sqrt(IMPACTOR_MASS / k_ref))
     contacts = lambda x: [material(x, t, IMPACTOR_MASS) for t in tg.t_mm]
   thick = sorted(set(tg.t_mm))
-  heavy = [] if a.no_heavy else [(t, m, v) for t in thick for m in (10.0, 20.0, 40.0) for v in (2.0, 4.3)]
+  heavy = [] if (a.no_heavy or multimass) else [(t, m, v) for t in thick for m in (10.0, 20.0, 40.0) for v in (2.0, 4.3)]
   heavy_sims = {m: FastDrop(a.dt, m) for m in (10.0, 20.0, 40.0)}
 
   def heavy_penalty(x):
@@ -181,6 +206,8 @@ def main():
       # bare: a rigid shell cannot stop a fast heavy body within 2 mm in one 0.5 ms step (v*dt alone is
       # 2.15 mm at 4.3 m/s), so the heavy-row limit is relaxed to 1.5 steps of travel
       lim = max(BARE_PEN, 1.5 * v * a.dt) if a.material == "bare" else pen_lim(a.material, t)
+      if a.bare_ref:
+        lim = 1.5 * v * np.sqrt(m / k_ref)
       viol += max(pen / lim - 1.0, 0.0) ** 2 + max(e - fit_m2.MAX_RESTITUTION, 0.0) ** 2
     return fit_m2.PENALTY * viol
 
@@ -200,9 +227,9 @@ def main():
   out = {"material": a.material, "x": res.x.tolist(), "x_names": NAMES, "dt": a.dt, "seed": a.seed,
          "rms": float(np.sqrt(np.mean(err ** 2))), "max": float(np.abs(err).max()),
          "heavy_penalty": heavy_penalty(res.x), "rest": a.rest, "max_e": fit_m2.MAX_RESTITUTION,
-         "rest_check": {str(t): rest_check(res.x, t, a.dt) for t in sorted(set(tg.t_mm))}, "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bottom_out": a.bottom_out, "bare_meas": a.bare_meas, "bare_t_mm": BARE_T if a.material == "bare" else None,
+         "rest_check": {str(t): rest_check(res.x, t, a.dt) for t in sorted(set(tg.t_mm))}, "chr_heights": a.chr_heights, "meas_weight": a.meas_weight, "no_heavy": a.no_heavy, "bottom_out": a.bottom_out, "bare_meas": a.bare_meas, "bare_ref": a.bare_ref, "k_ref": k_ref, "bare_t_mm": BARE_T if a.material == "bare" else None,
          "constraints_ok": bool(np.all(diag[:, 1] <= limits * 1.001) and np.all(diag[:, 2] <= fit_m2.MAX_RESTITUTION + 1e-3)),
-         "rows": [dict(t_mm=r.t_mm, h=r.h, src=r.source, target_kN=r.Fpk_N / 1e3, sim_kN=f / 1e3, pen_mm=p * 1e3, e=e)
+         "rows": [dict(t_mm=r.t_mm, mass=float(r.get("mass", IMPACTOR_MASS)), h=r.h, src=r.source, target_kN=r.Fpk_N / 1e3, sim_kN=f / 1e3, pen_mm=p * 1e3, e=e)
                   for (_, r), (f, p, e) in zip(tg.iterrows(), diag)],
          "fit_seconds": time.time() - t0}
   a.out.write_text(json.dumps(out, indent=1))

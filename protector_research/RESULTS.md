@@ -1178,3 +1178,16 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
   1. 局部接触（铝砸木面）：旧仿真比木材压溃软 2–8 倍，比弹性 Hertz 软 4–20 倍，接触时间长约 10 倍，压入深度大 5–10 倍。**不接近"铝外壳 + 木地板"的局部接触。**
   2. 只有在"悬空木龙骨楼板"这种整体柔度主导、且 link 有效质量为 10–40 kg 时，峰值力才落在楼板静刚度区间内。但楼板自身有质量，首个冲击峰由局部接触决定，所以这个区间是峰值的下限；而且木地板铺在混凝土上时不适用。
   3. 刚度 ∝ 质量是数值属性：同样落高下，轻的 link（手、头）接触最软、被低估最多（1 kg 低 7–8 倍），重的 link 低 2–3 倍。
+
+## 2026-11-24  无护具（bare）改标定到"铝外壳 + 木地板"（替代钢砧标定），等 Abaqus 真值
+
+- 用户决定：由我定一个合理的无护具参数，真值以后用 Abaqus 调。
+- 依据：原 bare 是钢冲头砸钢砧（实测读数）。机器人摔在地面上，铝外壳（屈服约 275 MPa）对木地板（横纹压溃强度约 5–20 MPa）时，最软的是木地板，所以由木地板决定刚度。
+- 基准（`tools/bare_reference.py`）：与护具落锤同一冲头（R 53 mm），木材在球下压溃：F = 2πR·σc·δ，即线性弹簧 k = 2πRσc；峰值 F = v√(k m)，压入 δ = v√(m/k)。取 σc = 10 MPa（硬木横纹量级）→ k = 3.33 MN/m；5.487 kg 时 0.1 m 为 6.0 kN，1 m 为 18.9 kN、压入 5.7 mm、加载时间 2.0 ms。5 / 20 MPa 作为上下界：1 m 时 13.4 / 26.8 kN。
+- 拟合（`fit_material.py --bare-ref`，dt 0.25 ms，带静止约束，回弹 ≤ 0.6）：
+  1. 只用 5.487 kg 一种质量拟合（3 个种子 + 5/20 MPa 各 1 个种子）：峰值误差 < 0.1%，但换成其他质量时力几乎不变（1 kg 和 40 kg 在 4.43 m/s 都约 19–22 kN，参考值是 8 / 51 kN）。这是一个阻尼主导的解，物理上不对，不用。
+  2. 多质量基准（1 / 5.487 / 20 / 40 kg × 0.1–1 m，`runs/bare_reference_wood_sc10_multimass.csv`；压入上限为参考值的 1.5 倍）：3 个种子一致，rms 22%，最大 40%。例：1 kg 1 m 10.3 kN（参考 8.1）；5.5 kg 1 m 28.0（18.9）；20 kg 1 m 33.0（36.2）；40 kg 1 m 39.4（51.1）。回弹 0.04–0.46，静止约束满足。
+  3. 也试了纯线性弹簧 + 阻尼（K 直接取 3.33 MN/m）：阻尼 300 N·s/m 时力的 rms 只有 5%，但回弹 0.80–0.96；阻尼 2000 时 rms 17%，回弹 0.29–0.78。木材压溃几乎不回弹，而 MuJoCo 接触没有加卸载迟滞，所以选 2.（回弹受限）。地面基准本身有 ×0.7–×1.4 的不确定，22% 在这个范围内。
+- 护具不受影响：SRM 6/12/24 mm 在落锤工况（≤ 1 m，5.5 kg）下都不会压到底，换 bare 后峰值逐位相同。
+- 安装：`engineai_ros2_workspace/src/simulation/mujoco/assets/config/protector_materials_wood.yaml`（srm/silicone 不变，bare = `runs/bare_wood/bare_wood_sc10mm_s2.json`）；原钢砧版 `protector_materials.yaml` 保留。`tools/run_sample_plan_material.sh` 新增 `MATERIALS=`，运行时写入 `contact_material.file`，结束后改回。
+- 机器人小批量测试（P5、P6 S4_trip_vx-1 各 50 次）运行中：`nmi_dataset_material/test_wood_*`。
