@@ -22,7 +22,7 @@
 
 ## 已知事实（改动前先读）
 
-- 机器人仿真加载 `pm_v2.xml` → `serial_pm_v2_new.xml`，**timestep = 2 ms**，Euler，pyramidal，Newton；仿真器链接 MuJoCo **3.2.3**（`/opt/engineai_robotics_third_party`）。
+- 机器人仿真（bench，`collision_model_type: mesh`）加载 `pm_v2_mesh.xml` → `serial_pm_v2_mesh.xml` + `environment/ground.xml`，**timestep = 2 ms**，Euler，pyramidal，Newton；MuJoCo **3.2.3**（`/opt/engineai_robotics_third_party`）。机器人 collision 类 `solref 0.0005 1`（`pm_v2.yaml` 的 `solref_6mm` 再写一遍肘/膝/髋偏航/肩偏航），地面 floor 未设 → 默认 `0.02 1`，solmix 相同 → **实际接触 solref = 0.01025**（2026-11-23 编译模型实测）。
 - 2 ms 下一步内能传递的力上限约为 Δp/dt，裸地冲击被低估约 6.7 倍。所以任何"按 2 ms 仿真力"标定的方法都要单独说明 timestep 依赖。
 - MuJoCo 软约束的力与接触的有效质量成正比，冲头质量（5.487 kg）不等于机器人 link 有效质量，迁移到机器人时要验证。
 - 机器人上 geom 与地面的接触参数会混合（solmix）。用 M2 时给护具 geom 设更高的 `priority`，让护具参数直接生效。

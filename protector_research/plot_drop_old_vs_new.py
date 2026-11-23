@@ -2,8 +2,8 @@
 
 measured : no protector  runs/bare_measured_peaks.csv (冲击力截取.zip, 0.1-1 m)
            SRM rho 0.4   data1 (drop.load_targets, 6/12/24 mm x 0.1/0.4/0.8/1.0 m; per-trial curves confirmed 2026-11-19)
-old sim  : the pipeline of the old robot data (nmi_dataset): dt 2 ms, MuJoCo default contact solref [0.02, 1] /
-           solimp [0.9, 0.95, 0.001, 0.5, 2], protector = CHR scaling of efc_force with the simulator's min-scale limits
+old sim  : the pipeline of the old robot data (nmi_dataset): dt 2 ms, effective robot-floor contact solref
+           [0.01025, 1] (robot 0.0005 mixed with the floor default 0.02) / solimp [0.9, 0.95, 0.001, 0.5, 2], protector = CHR scaling of efc_force with the simulator's min-scale limits
            (drop_m1.drop_m1, computed here at every measured height, 4 phases). No protector = the same contact model
            without scaling (scale_on=False; the old simulator with protection off).
 new sim  : the current simulator (contact_material, protector_materials.yaml as installed): dt 0.25 ms, bare = the
@@ -71,7 +71,7 @@ b = df[df.t_mm == 0]
 ax.plot(b.h, b.measured_kN, "o-", color="#222222", label="实测")
 ax.plot(b.h, b.new_kN, "s--", color="#1baf7a", mfc="none", mew=1.5, label="新仿真（0.25 ms，材料模型）")
 ob = b.dropna(subset=["old_kN"])
-ax.plot(ob.h, ob.old_kN, "^:", color="#c0392b", mfc="none", mew=1.5, label="旧仿真（2 ms，MuJoCo 默认接触）")
+ax.plot(ob.h, ob.old_kN, "^:", color="#c0392b", mfc="none", mew=1.5, label="旧仿真（2 ms，solref 0.01025）")
 ax.set_title("无护具：5.5 kg 落锤砸砧板")
 ax = axes[1]
 for t in (6, 12, 24):

@@ -1,4 +1,4 @@
-"""Emulate the current M1 pipeline (2 ms, default contact, CHR scaling of efc_force with the
+"""Emulate the current M1 pipeline (2 ms, the effective mixed robot-floor contact (OLD_SOLREF), CHR scaling of efc_force with the
 simulator's min-scale clamp and two-rate low-pass) on the drop test, to compare its accuracy
 with M2 on the same measured data.
 
@@ -26,8 +26,15 @@ def min_scale(fn):
   return MIN_HIGH
 
 
-def drop_m1(t_mm, v, dt=0.002, density=0.4, phase=0.0, scale_on=True):
-  c = Contact((0.02, 1.0), (0.9, 0.95, 0.001, 0.5, 2.0))  # MuJoCo defaults (robot links and floor)
+# Effective robot-floor contact of the old (bench) simulator, checked on the compiled pm_v2_mesh.xml (mujoco 3.2.3):
+# robot collision class solref 0.0005 1 (+ pm_v2.yaml solref_6mm 0.0005 on elbow/knee/hip-yaw/shoulder-yaw),
+# floor geom default 0.02 1, equal solmix -> mixed contact solref = (0.0005 + 0.02) / 2 = 0.01025; solimp 0.9 0.95 0.001.
+# Before 2026-11-23 this used (0.02, 1) (MuJoCo default for both), which was wrong.
+OLD_SOLREF = (0.01025, 1.0)
+
+
+def drop_m1(t_mm, v, dt=0.002, density=0.4, phase=0.0, scale_on=True, solref=OLD_SOLREF):
+  c = Contact(solref, (0.9, 0.95, 0.001, 0.5, 2.0))
   m = mujoco.MjModel.from_xml_string(build_xml(c, dt)); d = mujoco.MjData(m)
   d.qpos[2] = IMPACTOR_RADIUS + (2.0 - phase) * dt * v; d.qvel[2] = -v
   f6 = np.zeros(6); prev = 1.0; peak_applied = peak_unprot = 0.0; touched = False
