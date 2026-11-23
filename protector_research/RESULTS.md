@@ -1191,3 +1191,18 @@ NMI 重算 dt 问题：recalculate_nmi_fig_risk_cache 调用未传 dt（默认 2
 - 护具不受影响：SRM 6/12/24 mm 在落锤工况（≤ 1 m，5.5 kg）下都不会压到底，换 bare 后峰值逐位相同。
 - 安装：`engineai_ros2_workspace/src/simulation/mujoco/assets/config/protector_materials_wood.yaml`（srm/silicone 不变，bare = `runs/bare_wood/bare_wood_sc10mm_s2.json`）；原钢砧版 `protector_materials.yaml` 保留。`tools/run_sample_plan_material.sh` 新增 `MATERIALS=`，运行时写入 `contact_material.file`，结束后改回。
 - 机器人小批量测试（P5、P6 S4_trip_vx-1 各 50 次）运行中：`nmi_dataset_material/test_wood_*`。
+
+## 2026-11-24  木地板 bare 的机器人小批量测试（P5、P6 S4_trip_vx-1 各 50 次）
+
+- 数据：`nmi_dataset_material/test_wood_20261124_010941`（`MATERIALS=protector_materials_wood.yaml`），对照为 merged_20261120（钢砧 bare）中的同名 job。每次运行每个部位的单点峰值力：`runs/link_peaks_wood_test_20261124/`。
+
+  | | 躯干超 1 kN 次数 | 躯干峰值中位 / 最大 | 其他部位峰值中位 / 最大 | 肩偏航中位（左 / 右） |
+  |---|---|---|---|---|
+  | P5 钢砧 | 1/48 | 60.7 / 60.7 kN | 117 / 249 kN | 104 / 85 kN |
+  | P5 木地板 | 0/49 | — | 27.6 / 36.4 kN | 26.2 / 23.5 kN |
+  | P6 钢砧 | 39/48 | 26.4 / 49.5 kN | 5.5 / 22.1 kN | 5.2 kN |
+  | P6 木地板 | 10/46 | 5.9 / 9.4 kN | 11.2 / 27.5 kN | — |
+
+- P6 躯干：后背着地仍然超过 1 kN，但超阈次数从 39 次降到 10 次，峰值从 26 kN 降到 6 kN。这与冲量估计一致（约 35 N·s，接触几毫秒 → 约 10 kN）。P5 的肩部从约 100 kN 降到约 25 kN。P6 的"其他部位"中位数反而上升（髋 pitch 约 10 kN 不变，排序换了）。
+- 稳定性：最低点之后骨盆的回弹中位 0–6 mm、最大 15 mm（钢砧为 10 mm），没有弹飞；最终仍站着（z > 0.3 m）的次数为 P5 2/50、P6 5/50（钢砧都是 2/51）。
+- `pm_v2.yaml` 已自动改回（enabled false，file protector_materials.yaml）。
